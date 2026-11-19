@@ -1,0 +1,97 @@
+{
+  "bwv": "854",
+  "key": "E major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv854-prelude",
+      "kind": "prelude",
+      "title": "Prelude in E major",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-9-in-e-major-bwv-854/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/9.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "70fc2cce19c5be46b3dc9fab69916ffe6253a17f36e8833e0d2e226443e7d27e",
+        "measureRange": [
+          0,
+          24
+        ],
+        "editionNotes": "The PDMX MIDI realizes five inverted mordents. In measure 4 it starts on E5 at MIDI tick 8640 and first plays the written D-sharp 5 at tick 9000. The ornament continues through the written tie."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 719591",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/2/19/QmcfsSDhQWTey2zTA6wTExsyNh84oLTcnn1gatJREV5cw9.mid",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "0a0410192ea6a25460d50f120831b4ab959cd30e33b9d3e252b47e7eddc7cd8d",
+        "tickRange": [
+          0,
+          71040
+        ]
+      },
+      "expected": {
+        "measures": 24,
+        "attacks": 421,
+        "unplayedScoreAttacks": [
+          {
+            "tick": 72,
+            "midiPitch": 75
+          }
+        ],
+        "realizedOrnamentAttacks": 20
+      }
+    },
+    {
+      "id": "bwv854-fugue",
+      "kind": "fugue",
+      "title": "Fugue in E major",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-9-in-e-major-bwv-854/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/9.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "70fc2cce19c5be46b3dc9fab69916ffe6253a17f36e8833e0d2e226443e7d27e",
+        "measureRange": [
+          24,
+          53
+        ],
+        "editionNotes": "The MIDI adds 1920 ticks after the written prelude span at its closing fermata. The fugue timeline is measured from the MIDI section boundary at tick 71040, before its opening rests."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 719591",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/2/19/QmcfsSDhQWTey2zTA6wTExsyNh84oLTcnn1gatJREV5cw9.mid",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "0a0410192ea6a25460d50f120831b4ab959cd30e33b9d3e252b47e7eddc7cd8d",
+        "tickRange": [
+          71040,
+          126720
+        ]
+      },
+      "expected": {
+        "measures": 29,
+        "attacks": 731
+      }
+    }
+  ]
+}

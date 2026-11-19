@@ -1,0 +1,71 @@
+{
+  "bwv": "851",
+  "key": "D minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv851-prelude",
+      "kind": "prelude",
+      "title": "Prelude in D minor",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-praeludium-vi-bwv-851/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-praeludium-vi-bwv-851/bach-das-wohltemperierte-clavier-i-praeludium-vi-bwv-851.mxl",
+        "license": "Public Domain",
+        "sha256": "2398197ad49c7f4434ed8c5f339bb05505ba9acf51aaba2721d3df2b4296e1ba"
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2006/07/02-538",
+        "typesetter": "Davide Castellone",
+        "sourceEdition": "Breitkopf & Härtel, 1866",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=538",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV851/bwv851a/bwv851a.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV851/bwv851a/bwv851a.ly",
+        "license": "Public Domain",
+        "sha256": "4e1e1a9784b256e8fe7a41a47363fa4f061e331e9c2069ab2432893d05476022"
+      },
+      "expected": {
+        "measures": 26,
+        "attacks": 784
+      }
+    },
+    {
+      "id": "bwv851-fugue",
+      "kind": "fugue",
+      "title": "Fugue in D minor",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-fuga-vi-bwv-851/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-fuga-vi-bwv-851/bach-das-wohltemperierte-clavier-i-fuga-vi-bwv-851.mxl",
+        "license": "Public Domain",
+        "sha256": "9ed306912bb12ba4e174586cd424dd1127d0e117cfaaf17b8d1c7c30b86d5308",
+        "editionNotes": "In measure 43, the written eighth-note D3 at tick 506 (4 ticks per quarter) overlaps a sustained D3 beginning at tick 504. The reference MIDI plays the sustained D3 without a separate attack."
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "Mutopia-2007/06/13-988",
+        "typesetter": "Stelios Samelis",
+        "sourceEdition": "Bach-Gesellschaft, 1866",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=988",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV851/bwv851_fugue06/bwv851_fugue06.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV851/bwv851_fugue06/bwv851_fugue06.ly",
+        "license": "Public Domain",
+        "sha256": "81123c5d14cf383387b90e7e4aaf6f17ce7179a0a60831be69255bcfe30b3d4e"
+      },
+      "expected": {
+        "measures": 44,
+        "attacks": 715,
+        "scoreOnlyAttacks": [
+          {
+            "tick": 506,
+            "midiPitch": 50
+          }
+        ]
+      }
+    }
+  ]
+}

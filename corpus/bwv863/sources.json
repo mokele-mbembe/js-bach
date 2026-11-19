@@ -1,0 +1,98 @@
+{
+  "bwv": "863",
+  "key": "G-sharp minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv863-prelude",
+      "kind": "prelude",
+      "title": "Prelude in G-sharp minor",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-18-in-g-sharp-minor-bwv-863/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/18.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "11ef0634a67228758b4d28659be01a803d141ef705e887033932beacc3c6be66",
+        "measureRange": [
+          0,
+          29
+        ],
+        "editionNotes": "At the marked E-sharp 4 in measure 13, the MIDI starts on the upper neighbor. All four additional MIDI attacks fall within that written inverted mordent."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 541016",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/4/36/QmepgyvR2hH59vWABKn7Hovi7MLHBE9VfDyCviqF1xKBE6.mid",
+        "pdmxMetadata": "metadata/6/541016.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "a11ab6259a0e65160722acb027f4bfbbd34aeb715ade42527428429d2f971eb0",
+        "tickRange": [
+          0,
+          41760
+        ]
+      },
+      "expected": {
+        "measures": 29,
+        "attacks": 553,
+        "unplayedScoreAttacks": [
+          {
+            "tick": 150,
+            "midiPitch": 65
+          }
+        ],
+        "realizedOrnamentAttacks": 4
+      }
+    },
+    {
+      "id": "bwv863-fugue",
+      "kind": "fugue",
+      "title": "Fugue in G-sharp minor",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-18-in-g-sharp-minor-bwv-863/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/18.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "11ef0634a67228758b4d28659be01a803d141ef705e887033932beacc3c6be66",
+        "measureRange": [
+          29,
+          70
+        ]
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 541016",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/4/36/QmepgyvR2hH59vWABKn7Hovi7MLHBE9VfDyCviqF1xKBE6.mid",
+        "pdmxMetadata": "metadata/6/541016.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "a11ab6259a0e65160722acb027f4bfbbd34aeb715ade42527428429d2f971eb0",
+        "tickRange": [
+          41760,
+          120480
+        ]
+      },
+      "expected": {
+        "measures": 41,
+        "attacks": 798
+      }
+    }
+  ]
+}

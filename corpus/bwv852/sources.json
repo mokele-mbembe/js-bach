@@ -1,0 +1,154 @@
+{
+  "bwv": "852",
+  "key": "E-flat major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv852-prelude",
+      "kind": "prelude",
+      "title": "Prelude in E-flat major",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-7-in-e-flat-major-bwv-852/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/7.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "760e32172c09850a1d941a1d892119a31681e916006ed5a14444c5b74b81298f",
+        "measureRange": [
+          0,
+          70
+        ],
+        "editionNotes": "The PDMX MIDI omits 15 attacks in the upper staff’s inner voice in measures 63–64. The OpenWTC printed score (p. 57, PDF page 58) and MusicXML both show this voice. The MIDI also realizes the two written trills in measures 9 and 41."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 541071",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/14/34/QmWN4zCQ1SovDVE7mr4edFAy49A7bGE6xbdkvMcXHznfuT.mid",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "47a1676414fe5e02484fba9e51cbf0c7fda93109b732d4b054435f755e354177",
+        "tickRange": [
+          0,
+          134400
+        ]
+      },
+      "expected": {
+        "measures": 70,
+        "attacks": 1412,
+        "unplayedScoreAttacks": [
+          {
+            "tick": 3968,
+            "midiPitch": 68
+          },
+          {
+            "tick": 3972,
+            "midiPitch": 67
+          },
+          {
+            "tick": 3976,
+            "midiPitch": 65
+          },
+          {
+            "tick": 3980,
+            "midiPitch": 63
+          },
+          {
+            "tick": 3984,
+            "midiPitch": 65
+          },
+          {
+            "tick": 4004,
+            "midiPitch": 65
+          },
+          {
+            "tick": 4008,
+            "midiPitch": 67
+          },
+          {
+            "tick": 4012,
+            "midiPitch": 68
+          },
+          {
+            "tick": 4016,
+            "midiPitch": 67
+          },
+          {
+            "tick": 4020,
+            "midiPitch": 65
+          },
+          {
+            "tick": 4024,
+            "midiPitch": 63
+          },
+          {
+            "tick": 4028,
+            "midiPitch": 61
+          },
+          {
+            "tick": 4032,
+            "midiPitch": 60
+          },
+          {
+            "tick": 4048,
+            "midiPitch": 65
+          },
+          {
+            "tick": 4080,
+            "midiPitch": 63
+          }
+        ],
+        "realizedOrnamentAttacks": 10
+      }
+    },
+    {
+      "id": "bwv852-fugue",
+      "kind": "fugue",
+      "title": "Fugue in E-flat major",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-7-in-e-flat-major-bwv-852/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/7.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "760e32172c09850a1d941a1d892119a31681e916006ed5a14444c5b74b81298f",
+        "measureRange": [
+          70,
+          107
+        ],
+        "editionNotes": "The score restarts measure numbering at the Fugue. The MIDI realizes the written trills in measures 2, 4, 18, 21, and 30."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 541071",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/14/34/QmWN4zCQ1SovDVE7mr4edFAy49A7bGE6xbdkvMcXHznfuT.mid",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "47a1676414fe5e02484fba9e51cbf0c7fda93109b732d4b054435f755e354177",
+        "tickRange": [
+          134400,
+          205440
+        ]
+      },
+      "expected": {
+        "measures": 37,
+        "attacks": 887,
+        "realizedOrnamentAttacks": 35
+      }
+    }
+  ]
+}

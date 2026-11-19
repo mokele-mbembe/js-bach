@@ -1,0 +1,110 @@
+{
+  "bwv": "849",
+  "key": "C-sharp minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv849-prelude",
+      "kind": "prelude",
+      "title": "Prelude in C-sharp minor",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-praeludium-iv-bwv-849/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-praeludium-iv-bwv-849/bach-das-wohltemperierte-clavier-i-praeludium-iv-bwv-849.mxl",
+        "license": "Public Domain",
+        "sha256": "ee580a633207a48ef9cd0be6c04bcdef1da5fdffab55a7b69bd9b67f75c0646f",
+        "editionNotes": "The MIDI realizes some written grace notes slightly ahead of the beat. In measure 17 it also reattacks F-sharp 4 where the MusicXML has a tie continuation."
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2006/07/02-562",
+        "typesetter": "Davide Castellone",
+        "sourceEdition": "Breitkopf & Härtel, 1866",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=562",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV849/bwv849a/bwv849a.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV849/bwv849a/bwv849a.ly",
+        "license": "Public Domain",
+        "sha256": "db8fe5eac2216397b12542bf092517cae8f0df9e0cb3e38c7c930733a230025e"
+      },
+      "expected": {
+        "measures": 39,
+        "attacks": 657,
+        "overlappingScoreAttacks": 7,
+        "graceNotes": 17,
+        "midiOnlyAttacks": [
+          {
+            "tick": 3356,
+            "midiPitch": 52
+          },
+          {
+            "tick": 3406,
+            "midiPitch": 56
+          },
+          {
+            "tick": 7964,
+            "midiPitch": 60
+          },
+          {
+            "tick": 8014,
+            "midiPitch": 63
+          },
+          {
+            "tick": 9166,
+            "midiPitch": 75
+          },
+          {
+            "tick": 17180,
+            "midiPitch": 56
+          },
+          {
+            "tick": 17230,
+            "midiPitch": 59
+          },
+          {
+            "tick": 22990,
+            "midiPitch": 68
+          },
+          {
+            "tick": 28750,
+            "midiPitch": 73
+          },
+          {
+            "tick": 36864,
+            "midiPitch": 66
+          }
+        ]
+      }
+    },
+    {
+      "id": "bwv849-fugue",
+      "kind": "fugue",
+      "title": "Fugue in C-sharp minor",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-fuga-iv-bwv-849/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-fuga-iv-bwv-849/bach-das-wohltemperierte-clavier-i-fuga-iv-bwv-849.mxl",
+        "license": "Public Domain",
+        "sha256": "f836f7f8e7475b0436463b1faccbbf844ea29b9cb4837415e7d1119aaf1eab5f"
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "Mutopia-2006/07/02-596",
+        "typesetter": "Davide Castellone",
+        "sourceEdition": "Breitkopf & Härtel, 1866",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=596",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV849/bwv849b/bwv849b.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV849/bwv849b/bwv849b.ly",
+        "license": "Public Domain",
+        "sha256": "ccbae19559bef9793c313c733f9830106a42e723e38da56fb223dfb69eb8ac0f"
+      },
+      "expected": {
+        "measures": 115,
+        "attacks": 1309,
+        "overlappingScoreAttacks": 20
+      }
+    }
+  ]
+}

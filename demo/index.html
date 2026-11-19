@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>The Well-Tempered Clavier · js-bach</title>
+    <link rel="stylesheet" href="/demo.css">
+    <script type="module" src="/demo/main.js"></script>
+  </head>
+  <body>
+    <main>
+      <header class="work">
+        <p class="composer">Johann Sebastian Bach</p>
+        <h1>Prelude &amp; Fugue</h1>
+        <p class="catalogue" id="catalogue">The Well-Tempered Clavier, Book I</p>
+      </header>
+
+      <div class="player">
+        <form id="selection">
+          <fieldset>
+            <legend>Work</legend>
+            <div class="choices movements" id="works"></div>
+          </fieldset>
+          <fieldset>
+            <legend>Movement</legend>
+            <div class="choices movements">
+              <label><input type="radio" name="movement" value="prelude" checked><span>Prelude</span></label>
+              <label><input type="radio" name="movement" value="fugue"><span>Fugue</span></label>
+            </div>
+          </fieldset>
+          <fieldset id="voices" hidden disabled>
+            <legend>Fugue voices</legend>
+            <div class="choices" id="voice-choices"></div>
+          </fieldset>
+        </form>
+
+        <div class="timeline">
+          <progress id="progress" max="1" value="0" aria-label="Playback progress"></progress>
+          <div class="times"><span id="elapsed">0:00</span><span id="duration">0:00</span></div>
+        </div>
+
+        <div class="transport">
+          <button id="play" type="button" disabled>Play</button>
+          <button id="stop" type="button" disabled>Stop</button>
+          <p id="status" role="status">Loading scores…</p>
+        </div>
+      </div>
+
+      <section id="encoding" class="encoding" aria-labelledby="encoding-title" hidden>
+        <h2 id="encoding-title">Score encoding</h2>
+        <h3>Brotli size</h3>
+        <dl class="compression">
+          <div><dt>Event stream</dt><dd id="event-bytes"></dd></div>
+          <div><dt>Rhythm encoding</dt><dd id="template-bytes"></dd></div>
+          <div><dt>Transposition encoding</dt><dd id="fragment-bytes"></dd></div>
+        </dl>
+        <h3>Rhythm templates</h3>
+        <p id="rhythm-summary" class="encoding-summary"></p>
+        <ol id="measure-map" class="measure-map" aria-label="Encoding by measure" hidden></ol>
+        <h3>Transposed fragments</h3>
+        <p id="fragment-summary" class="encoding-summary"></p>
+        <ol id="fragment-map" class="fragment-map" aria-label="Reused fragments by voice and measure" hidden></ol>
+      </section>
+
+      <footer id="credits" aria-label="Score credits"></footer>
+    </main>
+  </body>
+</html>
