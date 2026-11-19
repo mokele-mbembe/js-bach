@@ -1,0 +1,65 @@
+{
+  "bwv": "856",
+  "key": "F major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv856-prelude",
+      "kind": "prelude",
+      "title": "Prelude in F major",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-praeludium-xi-bwv-856/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-praeludium-xi-bwv-856/bach-das-wohltemperierte-clavier-i-praeludium-xi-bwv-856.mxl",
+        "license": "Public Domain",
+        "sha256": "0380f5214ea873955d62c807cb8ecefb3898c4608dee5bed473a544228e88669"
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2007/04/21-963",
+        "typesetter": "Stelios Samelis",
+        "sourceEdition": "Bach-Gesellschaft",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=963",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV856/BWV856_Praeludium11/BWV856_Praeludium11.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV856/BWV856_Praeludium11/BWV856_Praeludium11.ly",
+        "license": "Public Domain",
+        "sha256": "841f6f64113cadd8ca3262671abde5aa6f09e20b243e059d2298d8184338c8d4"
+      },
+      "expected": {
+        "measures": 18,
+        "attacks": 572
+      }
+    },
+    {
+      "id": "bwv856-fugue",
+      "kind": "fugue",
+      "title": "Fugue in F major",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-fuga-xi-bwv-856/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-fuga-xi-bwv-856/bach-das-wohltemperierte-clavier-i-fuga-xi-bwv-856.mxl",
+        "license": "Public Domain",
+        "sha256": "819b453929deab2a6752d1d53b5402dce322618e64a6397e3962879afa305cf4",
+        "editionNotes": "The 73 MusicXML measures include the opening pickup, numbered 0. The Mutopia MIDI matches all distinct metered attacks, including the pickup."
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "Mutopia-2007/04/21-964",
+        "typesetter": "Stelios Samelis",
+        "sourceEdition": "Bach-Gesellschaft",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=964",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV856/BWV856_Fugue11/BWV856_Fugue11.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV856/BWV856_Fugue11/BWV856_Fugue11.ly",
+        "license": "Public Domain",
+        "sha256": "4fd74d7a22ecef9c3e28e617765669a4450b85f8c7f14fb274a780ab98daee06"
+      },
+      "expected": {
+        "measures": 73,
+        "attacks": 667
+      }
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "bwv": "858",
+  "key": "F-sharp major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv858-prelude",
+      "kind": "prelude",
+      "title": "Prelude in F-sharp major",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "PDMX",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mxl.tar.gz?download=1",
+        "archiveMember": "mxl/8/30/QmQL1MKzhKgMynE9fbuuVWRGZSfMqMSb3nkuEoh6w4CQbA.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "0eeee72c50d8c6e8df56e5d171fc85deb2265bb5fa8fe1e29078df71ef7d010a",
+        "measureRange": [
+          0,
+          30
+        ],
+        "editionNotes": "The PDMX MusicXML keeps the original continuous bar numbers. The prelude covers bars 1–30. The reference MIDI realizes the written trills and inverted mordent. At the marked C-sharp 5 in bar 1 it starts on the upper neighbor."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 541041",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/8/30/QmQL1MKzhKgMynE9fbuuVWRGZSfMqMSb3nkuEoh6w4CQbA.mid",
+        "pdmxMetadata": "metadata/1/541041.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "799c396924f6e2e308c2b7e6edef723044b12813c54a78b250064ebb860798ac",
+        "tickRange": [
+          0,
+          43200
+        ]
+      },
+      "expected": {
+        "measures": 30,
+        "attacks": 404,
+        "unplayedScoreAttacks": [
+          {
+            "tick": 12,
+            "midiPitch": 73
+          }
+        ],
+        "realizedOrnamentAttacks": 69
+      }
+    },
+    {
+      "id": "bwv858-fugue",
+      "kind": "fugue",
+      "title": "Fugue in F-sharp major",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "PDMX",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mxl.tar.gz?download=1",
+        "archiveMember": "mxl/8/30/QmQL1MKzhKgMynE9fbuuVWRGZSfMqMSb3nkuEoh6w4CQbA.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "0eeee72c50d8c6e8df56e5d171fc85deb2265bb5fa8fe1e29078df71ef7d010a",
+        "measureRange": [
+          30,
+          65
+        ],
+        "editionNotes": "The fugue covers original bars 31–65. The reference MIDI realizes the written inverted mordents and begins seven of them on the upper neighbor. The attack offsets are relative to the fugue."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 541041",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/8/30/QmQL1MKzhKgMynE9fbuuVWRGZSfMqMSb3nkuEoh6w4CQbA.mid",
+        "pdmxMetadata": "metadata/1/541041.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "799c396924f6e2e308c2b7e6edef723044b12813c54a78b250064ebb860798ac",
+        "tickRange": [
+          43200,
+          110400
+        ]
+      },
+      "expected": {
+        "measures": 35,
+        "attacks": 853,
+        "unplayedScoreAttacks": [
+          {
+            "tick": 24,
+            "midiPitch": 73
+          },
+          {
+            "tick": 88,
+            "midiPitch": 68
+          },
+          {
+            "tick": 152,
+            "midiPitch": 49
+          },
+          {
+            "tick": 472,
+            "midiPitch": 68
+          },
+          {
+            "tick": 632,
+            "midiPitch": 46
+          },
+          {
+            "tick": 888,
+            "midiPitch": 66
+          },
+          {
+            "tick": 1000,
+            "midiPitch": 73
+          }
+        ],
+        "realizedOrnamentAttacks": 30
+      }
+    }
+  ]
+}

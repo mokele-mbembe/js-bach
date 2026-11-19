@@ -1,0 +1,68 @@
+{
+  "bwv": "850",
+  "key": "D major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv850-prelude",
+      "kind": "prelude",
+      "title": "Prelude in D major",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-praeludium-v-bwv-850/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-praeludium-v-bwv-850/bach-das-wohltemperierte-clavier-i-praeludium-v-bwv-850.mxl",
+        "license": "Public Domain",
+        "sha256": "8ee2031c326a174ae8689f93e23d98430e21a6fb0c62086cb284fb55925d98dd"
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2008/07/30-1496",
+        "typesetter": "Itay Perl",
+        "sourceEdition": "Breitkopf & Härtel, 1866",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1496",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV850/bwv850a/bwv850a.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV850/bwv850a/bwv850a-lys.zip",
+        "license": "Public Domain",
+        "sha256": "a4c490e1084ea223ebd03e149eeb677884188696509d8699cc9bc575a5071b39"
+      },
+      "expected": {
+        "measures": 35,
+        "attacks": 718
+      }
+    },
+    {
+      "id": "bwv850-fugue",
+      "kind": "fugue",
+      "title": "Fugue in D major",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-fuga-v-bwv-850/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-fuga-v-bwv-850/bach-das-wohltemperierte-clavier-i-fuga-v-bwv-850.mxl",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "attribution": "Sven Reichard / Mutopia Project (Mutopia-2018/10/08-2233)",
+        "sha256": "f75cc3160099186221e55c91f8f10073bdee2147c5bbdd24cb16c8586112007b"
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "Mutopia-2018/10/08-2233",
+        "typesetter": "Sven Reichard",
+        "sourceEdition": "Breitkopf & Härtel, 1866, Plate XIV, pp. 20–21",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=2233",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV850/bwv850b/bwv850b.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV850/bwv850b/bwv850b-lys.zip",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "attribution": "Sven Reichard / Mutopia Project (Mutopia-2018/10/08-2233)",
+        "sha256": "a025e4dee68debf652417c866738f5dd15c5b269d46cd58d401c95da5211b626"
+      },
+      "expected": {
+        "measures": 27,
+        "attacks": 772
+      }
+    }
+  ]
+}

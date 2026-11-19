@@ -1,0 +1,64 @@
+{
+  "bwv": "861",
+  "key": "G minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv861-prelude",
+      "kind": "prelude",
+      "title": "Prelude in G minor",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-praeludium-xvi-bwv-861/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-praeludium-xvi-bwv-861/bach-das-wohltemperierte-clavier-i-praeludium-xvi-bwv-861.mxl",
+        "license": "Public Domain",
+        "sha256": "8ab85b3b5210f80340e3ae9264a0119275d37d476aee5de5c70ee7ee74ab5283"
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2006/08/17-806",
+        "typesetter": "Stelios Samelis",
+        "sourceEdition": "Bach-Gesellschaft edition (1866)",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=806",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV861/BWV861_Praeludium16/BWV861_Praeludium16.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV861/BWV861_Praeludium16/BWV861_Praeludium16.ly",
+        "license": "Public Domain",
+        "sha256": "bbbd022695757c1adfb73c12b2b2e12c1478d45ac437ee59330a9cc7d9c1a86a"
+      },
+      "expected": {
+        "measures": 19,
+        "attacks": 534
+      }
+    },
+    {
+      "id": "bwv861-fugue",
+      "kind": "fugue",
+      "title": "Fugue in G minor",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-fuga-xvi-bwv-861/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-fuga-xvi-bwv-861/bach-das-wohltemperierte-clavier-i-fuga-xvi-bwv-861.mxl",
+        "license": "Public Domain",
+        "sha256": "9832a4ee50eb8132ee0f567b33921416f0fd1150a54eacd2bd12195c2419d2b3"
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "Mutopia-2011/10/12-805",
+        "typesetter": "Stelios Samelis",
+        "sourceEdition": "Bach-Gesellschaft edition (1866)",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=805",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV861/BWV861_Fuga16/BWV861_Fuga16.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV861/BWV861_Fuga16/BWV861_Fuga16.ly",
+        "license": "Public Domain",
+        "sha256": "d73c189393aacda2cf439d246db7aa0fea9408087a1e5fdd27ed9225d72010bf"
+      },
+      "expected": {
+        "measures": 34,
+        "attacks": 747
+      }
+    }
+  ]
+}

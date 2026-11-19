@@ -1,0 +1,75 @@
+{
+  "bwv": "860",
+  "key": "G major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv860-prelude",
+      "kind": "prelude",
+      "title": "Prelude in G major",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-praeludium-xv-bwv-860/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-praeludium-xv-bwv-860/bach-das-wohltemperierte-clavier-i-praeludium-xv-bwv-860.mxl",
+        "license": "Public Domain",
+        "sha256": "7fe882a89602c4a4ce080c617f8405dc91f16546b6eba4aecf50a32ee4715e75"
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2005/10/02-604",
+        "typesetter": "Stelios Samelis",
+        "sourceEdition": "Augener, edited by Carl Czerny",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=604",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV860/BWV860_Praeludium15/BWV860_Praeludium15.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV860/BWV860_Praeludium15/BWV860_Praeludium15.ly",
+        "license": "Public Domain",
+        "sha256": "c61255adba4322aa1b4efc24d0b65d8f8995bf0bfb51f49ab1274089a3ad7dde"
+      },
+      "expected": {
+        "measures": 19,
+        "attacks": 607
+      }
+    },
+    {
+      "id": "bwv860-fugue",
+      "kind": "fugue",
+      "title": "Fugue in G major",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-fuga-xv-bwv-860/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-fuga-xv-bwv-860/bach-das-wohltemperierte-clavier-i-fuga-xv-bwv-860.mxl",
+        "license": "Public Domain",
+        "sha256": "3591841f0614939795569d7e15a93160c0444d7da2c62e8da9bf42ff76a67080",
+        "editionNotes": "The written attacks on D3 in measure 60 and C5 in measure 85 overlap sustained notes of the same pitch. The reference MIDI plays the sustained notes without separate attacks. The listed offsets use 8 Score IR ticks per quarter."
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "Mutopia-2005/10/03-605",
+        "typesetter": "Stelios Samelis",
+        "sourceEdition": "Augener, edited by Carl Czerny",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=605",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV860/BWV860_Fuga15/BWV860_Fuga15.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV860/BWV860_Fuga15/BWV860_Fuga15.ly",
+        "license": "Public Domain",
+        "sha256": "46c44b60d45df33130df3d2d6343090adb525d30aaca721dbbdacae82c81b7d5"
+      },
+      "expected": {
+        "measures": 86,
+        "attacks": 1691,
+        "scoreOnlyAttacks": [
+          {
+            "tick": 1434,
+            "midiPitch": 50
+          },
+          {
+            "tick": 2030,
+            "midiPitch": 72
+          }
+        ]
+      }
+    }
+  ]
+}

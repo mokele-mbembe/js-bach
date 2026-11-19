@@ -1,0 +1,124 @@
+{
+  "bwv": "857",
+  "key": "F minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv857-prelude",
+      "kind": "prelude",
+      "title": "Prelude in F minor",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-praeludium-xii-bwv-857/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-praeludium-xii-bwv-857/bach-das-wohltemperierte-clavier-i-praeludium-xii-bwv-857.mxl",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "attribution": "Sven Reichard / Mutopia Project (Mutopia-2018/06/04-2226)",
+        "sha256": "bc7b4df58c2fcaac66f4e7867f7d60d509f166040bc00ba73ef933a080c392c6",
+        "editionNotes": "At eight written inverted mordents, the Mutopia MIDI starts on the upper neighbor and plays the principal pitch later. The written onsets below are in Score IR ticks, with 8 ticks per quarter. All 32 additional MIDI attacks fall inside those written ornaments."
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2018/06/04-2226",
+        "typesetter": "Sven Reichard",
+        "sourceEdition": "Bach-Gesellschaft Ausgabe, Band 14, Breitkopf und Härtel, 1866, Plate B.W. XIV, pp. 44–45",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=2226",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV857/BWV857_Praeludium12/BWV857_Praeludium12.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV857/BWV857_Praeludium12/BWV857_Praeludium12.ly",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "attribution": "Sven Reichard / Mutopia Project (Mutopia-2018/06/04-2226)",
+        "sha256": "159e53d9af385b1fae9ccfb085f239219d78b579c9fc74981dc1f7723392eaa8"
+      },
+      "expected": {
+        "measures": 22,
+        "attacks": 503,
+        "unplayedScoreAttacks": [
+          {
+            "tick": 56,
+            "midiPitch": 70
+          },
+          {
+            "tick": 88,
+            "midiPitch": 65
+          },
+          {
+            "tick": 120,
+            "midiPitch": 70
+          },
+          {
+            "tick": 156,
+            "midiPitch": 68
+          },
+          {
+            "tick": 224,
+            "midiPitch": 70
+          },
+          {
+            "tick": 248,
+            "midiPitch": 58
+          },
+          {
+            "tick": 304,
+            "midiPitch": 71
+          },
+          {
+            "tick": 312,
+            "midiPitch": 72
+          }
+        ],
+        "realizedOrnamentAttacks": 32
+      }
+    },
+    {
+      "id": "bwv857-fugue",
+      "kind": "fugue",
+      "title": "Fugue in F minor",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-fuga-xii-bwv-857/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-fuga-xii-bwv-857/bach-das-wohltemperierte-clavier-i-fuga-xii-bwv-857.mxl",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "attribution": "Sven Reichard / Mutopia Project (Mutopia-2018/06/04-2225)",
+        "sha256": "8a93725dede603257eb3f6fb1d4627b248447c819a4a1eca06989702a44f1c6e",
+        "editionNotes": "The Mutopia MIDI starts on the upper neighbor at the inverted mordents in measures 6 and 57 and the trill in measure 27. The written onsets below are in Score IR ticks, with 4 ticks per quarter. All 16 additional MIDI attacks fall inside those written ornaments."
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "Mutopia-2018/06/04-2225",
+        "typesetter": "Sven Reichard",
+        "sourceEdition": "Bach-Gesellschaft Ausgabe, Band 14, Breitkopf und Härtel, 1866, Plate B.W. XIV, pp. 46–47",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=2225",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV857/BWV857_Fuga12/BWV857_Fuga12.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV857/BWV857_Fuga12/BWV857_Fuga12.ly",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "attribution": "Sven Reichard / Mutopia Project (Mutopia-2018/06/04-2225)",
+        "sha256": "16bed80759b4d559f966aa8e3d0542792cb2c807e53c98f3191be805cb247302"
+      },
+      "expected": {
+        "measures": 58,
+        "attacks": 1309,
+        "unplayedScoreAttacks": [
+          {
+            "tick": 92,
+            "midiPitch": 59
+          },
+          {
+            "tick": 420,
+            "midiPitch": 61
+          },
+          {
+            "tick": 908,
+            "midiPitch": 64
+          }
+        ],
+        "realizedOrnamentAttacks": 16
+      }
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "bwv": "847",
+  "key": "C minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv847-prelude",
+      "kind": "prelude",
+      "title": "Prelude in C minor",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-praeludium-ii-bwv-847/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-praeludium-ii-bwv-847/bach-das-wohltemperierte-clavier-i-praeludium-ii-bwv-847.mxl",
+        "license": "Public Domain",
+        "sha256": "757535d58b14b290e7683b6e6a06f3bb5db376649b748d80aa9a6d9687fc60fe",
+        "editionNotes": "In measure 34, the upper line's short C4 at tick 2122 (16 ticks per quarter) is written in Noctave and the source LilyPond. The reference MIDI contains a longer C4 from tick 2112 through 2128 without a separate attack at 2122."
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2006/07/02-550",
+        "typesetter": "Davide Castellone",
+        "sourceEdition": "Breitkopf & Härtel, 1866",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=550",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV847/bwv847a/bwv847a.mid",
+        "license": "Public Domain",
+        "sha256": "9e29d5b640d875bcfa93824cc963a4d9419ce2139cfd4e786148d45127e602d8"
+      },
+      "expected": {
+        "measures": 38,
+        "attacks": 1091,
+        "scoreOnlyAttacks": [{ "tick": 2122, "midiPitch": 60 }]
+      }
+    },
+    {
+      "id": "bwv847-fugue",
+      "kind": "fugue",
+      "title": "Fugue in C minor",
+      "voices": [
+        { "name": "Soprano", "ids": ["1"] },
+        { "name": "Alto", "ids": ["2"] },
+        { "name": "Bass", "ids": ["5", "6", "7", "8", "9", "10"] }
+      ],
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-fuga-ii-bwv-847/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-fuga-ii-bwv-847/bach-das-wohltemperierte-clavier-i-fuga-ii-bwv-847.mxl",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "attribution": "Urs Metzger / Mutopia Project (Mutopia-2014/03/02-1941)",
+        "sha256": "5c6f10ef4437a2a029321922f54d16fb5935a1f96d18cc346d1b7484fb3b620d"
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "Mutopia-2014/03/02-1941",
+        "typesetter": "Urs Metzger",
+        "sourceEdition": "Edition Peters",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1941",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV847/fuga2/fuga2.mid",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "attribution": "Urs Metzger / Mutopia Project (Mutopia-2014/03/02-1941)",
+        "sha256": "74c3c61d820ce694741abaf9736a8ad81b8f587beb06eddd7ee8edd6c442b384"
+      },
+      "expected": { "measures": 31, "attacks": 751 }
+    }
+  ]
+}

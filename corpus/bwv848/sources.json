@@ -1,0 +1,73 @@
+{
+  "bwv": "848",
+  "key": "C-sharp major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv848-prelude",
+      "kind": "prelude",
+      "title": "Prelude in C-sharp major",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-praeludium-iii-bwv-848/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-praeludium-iii-bwv-848/bach-das-wohltemperierte-clavier-i-praeludium-iii-bwv-848.mxl",
+        "license": "Public Domain",
+        "sha256": "38c207b32d84104022a5e1e7c56fd020f6f6f551fc74f71ce235da726818931a"
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2007/01/12-561",
+        "typesetter": "Davide Castellone",
+        "sourceEdition": "Breitkopf & Härtel, 1866",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=561",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV848/bwv848a/bwv848a.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV848/bwv848a/bwv848a.ly",
+        "license": "Public Domain",
+        "sha256": "c2259949d4ebb3fa7b69824a13df92bed2d2d6a2f28b82461880bbc9e9dd6161"
+      },
+      "expected": {
+        "measures": 104,
+        "attacks": 810
+      }
+    },
+    {
+      "id": "bwv848-fugue",
+      "kind": "fugue",
+      "title": "Fugue in C-sharp major",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-fuga-iii-bwv-848/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-fuga-iii-bwv-848/bach-das-wohltemperierte-clavier-i-fuga-iii-bwv-848.mxl",
+        "license": "Public Domain",
+        "sha256": "d6fde5e09c3f0cf2cde4a9f430c7f85b0b40fa49c4343aafa2a9bf1ba34e126b",
+        "editionNotes": "The MIDI realizes a written A-sharp grace note shortly before measure 13. The MusicXML exports the C-sharp 4 tie from measures 51 to 52 under voice IDs 2 and 6."
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "Mutopia-2007/01/12-569",
+        "typesetter": "Davide Castellone",
+        "sourceEdition": "Breitkopf & Härtel, 1866",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=569",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV848/bwv848b/bwv848b.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV848/bwv848b/bwv848b.ly",
+        "license": "Public Domain",
+        "sha256": "74a3ba7798c99340a88844d7deabbe35369a75e09771cc234bae6986d3e46a1f"
+      },
+      "expected": {
+        "measures": 55,
+        "attacks": 1408,
+        "overlappingScoreAttacks": 23,
+        "graceNotes": 3,
+        "midiOnlyAttacks": [
+          {
+            "tick": 18407,
+            "midiPitch": 82
+          }
+        ]
+      }
+    }
+  ]
+}

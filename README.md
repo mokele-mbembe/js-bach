@@ -1,2 +1,51 @@
 # js-bach
 A verified, music-aware compiler and JavaScript runtime for the works of J.S. Bach.
+
+## Play BWV 846–863
+
+With Node.js 22 or later, install the dependencies and start the local demo.
+
+```sh
+npm ci
+npm run demo
+```
+
+Open the local player, choose any work from BWV 846 through 863, and select Prelude or Fugue. The BWV 846 and 847 fugues also offer solos that start at the selected voice’s first entry and preserve its later rests. Changing the work, movement, or voice stops the current playback. [Local player](http://127.0.0.1:4173/)
+
+The player joins tied notes across measures and schedules triangle oscillators with Web Audio. It takes the tempo from the selected score and plays the main written notes at ornaments. The Score IR preserves grace notes as zero-duration events, which the demo skips during playback. [Performance conversion](src/performance.ts) · [Web Audio scheduler](src/oscillator-player.ts)
+
+The player expands the smaller encoded representation of each movement before playback. The measure map marks rhythm template references. The fragment list shows each selected fragment’s voice, measure range, and transposition in semitones. Every movement displays the ordinary event stream and both encoded Brotli sizes.
+
+## Import the corpus
+
+With Node.js 22 or later and npm installed, run these commands from the repository root.
+
+```sh
+npm ci
+npm test
+npm run build:corpus
+```
+
+The build writes one Score IR JSON file per movement and copies each source manifest to its work directory under `dist/corpus/`. The importer accepts the pitched, single-part MusicXML 3.1 and 4.0 subsets used by the corpus. For works published in a single MusicXML archive, the manifest gives the measure ranges for the two movements. The output uses integer ticks, with a quarter-note division for the score, a start tick for each measure, and a measure-relative offset for each note or rest. Notes retain their written pitch, voice, staff, ties, and notation marks. Tempo comes from the imported edition when specified. [MVP plan](docs/mvp.md)
+
+The tests check the original file hashes and compare distinct metered `(start tick, MIDI pitch)` pairs against the upstream reference MIDI. The manifests record expected differences from overlapping notes, realized ornaments, an arpeggiated chord, and a reattack at a written tie. The BWV 852 prelude also pins the 15 attacks omitted from the PDMX MIDI and verified against the printed OpenWTC edition in measures 63–64. [Importer tests](test/import-mxl.test.ts) · [OpenWTC printed edition](https://upload.wikimedia.org/wikipedia/commons/d/d8/J.S._Bach_-_The_Well-Tempered_Clavier%2C_Book_1_-_OpenWTC.pdf#page=58)
+
+## Compare rhythm encoding
+
+`npm run build:corpus` writes the template-encoded `.rhythm.json` files alongside the original Score IR. The build expands each encoded file and checks every Score IR field before writing the results. A template shares timing, rests, voices, ties, and notation marks only when those fields match. Each reference stores its own written pitches in event order. [Rhythm codec](src/rhythm-templates.ts) · [Round-trip tests](test/rhythm-templates.test.ts)
+
+The build prints the Brotli sizes, writes a `compression.json` file per work, and generates a single table for all 36 movements in `dist/corpus/compression.md`. It compares compact UTF-8 JSON for the event stream and each encoding, with Brotli text mode and quality 11.
+
+## Compare transposed fragments
+
+The build also writes `.transposed.json` files. The search groups metered pitched notes by exported voice ID and slides over 4–16 successive note positions on the score timeline, including written tie continuations. Matches share relative onset, duration, chromatic and diatonic intervals, ties, notation, and relative staff changes. Occurrences carry absolute anchors and event positions, which let the decoder restore spelling and event order across barlines. Rests and grace notes stay in their original positions.
+
+Each search step excludes already claimed events, ranks candidates by estimated JSON savings, and Brotli-compresses the 24 best candidates with the same parameters as the report. It keeps the best strict improvement per step. The build checks the expanded Score IR and reports fragment bytes alongside the event stream and rhythm encoding. [Fragment codec](src/transposed-fragments.ts) · [Fragment tests](test/transposed-fragments.test.ts)
+
+## Score credits
+
+Johann Sebastian Bach composed all 36 movements. The redistributed files retain their upstream terms. BWV 846 includes CC0 and public-domain scores. The BWV 847 and 850 preludes and both movements of BWV 848, 849, 851, 853, 855, 856, 860, and 861 are marked public domain. Each manifest records the edition and typesetter. [BWV 846 sources](corpus/bwv846/sources.json) · [BWV 847 sources](corpus/bwv847/sources.json) · [BWV 848 sources](corpus/bwv848/sources.json) · [BWV 849 sources](corpus/bwv849/sources.json) · [BWV 850 sources](corpus/bwv850/sources.json) · [BWV 851 sources](corpus/bwv851/sources.json) · [BWV 853 sources](corpus/bwv853/sources.json) · [BWV 855 sources](corpus/bwv855/sources.json) · [BWV 856 sources](corpus/bwv856/sources.json) · [BWV 860 sources](corpus/bwv860/sources.json) · [BWV 861 sources](corpus/bwv861/sources.json)
+
+BWV 852, 854, 858, 859, 862, and 863 use Olivier Miquel’s CC0 Open Well-Tempered Clavier edition. The reference MIDI files and the BWV 858 MusicXML come from PDMX. The MusicXML for BWV 852, 854, 859, 862, and 863 comes from Artform. [BWV 852 sources](corpus/bwv852/sources.json) · [BWV 854 sources](corpus/bwv854/sources.json) · [BWV 858 sources](corpus/bwv858/sources.json) · [BWV 859 sources](corpus/bwv859/sources.json) · [BWV 862 sources](corpus/bwv862/sources.json) · [BWV 863 sources](corpus/bwv863/sources.json) · [OpenWTC edition](https://welltemperedclavier.org/) · [PDMX data release](https://doi.org/10.5281/zenodo.15571083)
+
+The MusicXML, reference MIDI, and generated score data for the BWV 847 and 850 fugues and both BWV 857 movements are distributed under CC BY-SA 4.0. The BWV 847 edition is credited to Urs Metzger / Mutopia Project (Mutopia-2014/03/02-1941). The BWV 850 fugue (Mutopia-2018/10/08-2233) and the BWV 857 prelude (Mutopia-2018/06/04-2226) and fugue (Mutopia-2018/06/04-2225) are credited to Sven Reichard / Mutopia Project. Noctave converted the Mutopia engravings to MusicXML, and js-bach converts the MusicXML into score data. The project code uses GPLv3. [BWV 847 Noctave edition](https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-fuga-ii-bwv-847/) · [BWV 850 Noctave edition](https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-fuga-v-bwv-850/) · [BWV 857 sources](corpus/bwv857/sources.json) · [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) · [Code license](LICENSE)

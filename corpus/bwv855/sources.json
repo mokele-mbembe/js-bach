@@ -1,0 +1,68 @@
+{
+  "bwv": "855",
+  "key": "E minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv855-prelude",
+      "kind": "prelude",
+      "title": "Prelude in E minor",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-praeludium-x-bwv-855/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-praeludium-x-bwv-855/bach-das-wohltemperierte-clavier-i-praeludium-x-bwv-855.mxl",
+        "license": "Public Domain",
+        "sha256": "24b6af46a3319518ad0c3370c55d2a45f3d6038ea3dd80712847804922ac2893",
+        "editionNotes": "The MIDI combines five overlapping same-pitch attacks; the MusicXML also preserves one written grace note. Both formats mark the tempo change at measure 23."
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2006/07/02-545",
+        "typesetter": "Davide Castellone",
+        "sourceEdition": "Breitkopf & Härtel, 1866",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=545",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV855/bwv855a/bwv855a.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV855/bwv855a/bwv855a.ly",
+        "license": "Public Domain",
+        "sha256": "f8c5b689e57bc4a93fa0ee66c4d152335d4218eb3529dad2c63c0581864d963e"
+      },
+      "expected": {
+        "measures": 41,
+        "attacks": 1148,
+        "overlappingScoreAttacks": 5,
+        "graceNotes": 1
+      }
+    },
+    {
+      "id": "bwv855-fugue",
+      "kind": "fugue",
+      "title": "Fugue in E minor",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-fuga-x-bwv-855/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-fuga-x-bwv-855/bach-das-wohltemperierte-clavier-i-fuga-x-bwv-855.mxl",
+        "license": "Public Domain",
+        "sha256": "4497f4297a70bc15f73b092678b29a4284d3cc2164ba06e0fa90ef015ea1a02f",
+        "editionNotes": "The MIDI and score agree on all metered attacks. The MIDI ends at the last release, before the rests at the end of the written final measure."
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "Mutopia-2006/07/02-546",
+        "typesetter": "Davide Castellone",
+        "sourceEdition": "Breitkopf & Härtel, 1866",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=546",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV855/bwv855b/bwv855b.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV855/bwv855b/bwv855b.ly",
+        "license": "Public Domain",
+        "sha256": "6e891f8896716fa16c9262027cbff34bdfacbf3c728d70d88a4829091a7a9ee4"
+      },
+      "expected": {
+        "measures": 42,
+        "attacks": 811
+      }
+    }
+  ]
+}

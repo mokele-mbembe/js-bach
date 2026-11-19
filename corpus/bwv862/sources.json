@@ -1,0 +1,99 @@
+{
+  "bwv": "862",
+  "key": "A-flat major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv862-prelude",
+      "kind": "prelude",
+      "title": "Prelude in A-flat major",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-17-in-a-flat-major-bwv-862/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/17.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "48366ebbc882ef2dc360e3140b9f7392fca9f2ed0e73cce0a3e3695be638581e",
+        "measureRange": [
+          0,
+          44
+        ],
+        "editionNotes": "The source preserves the A-flat 4 tie from measure 33 into measure 34. At the marked F4 in measure 17, the MIDI starts on the upper neighbor. All 19 additional MIDI attacks fall within written ornaments."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 719551",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/12/40/QmUrzWELpt4d6eP4no4NUiVfeDSKWorhNC15mCaMmY995p.mid",
+        "pdmxMetadata": "metadata/1/719551.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "50d13b6e000d545a3ca73c2e11d479176d0fbaafeefc86210d58f475ae4dadec",
+        "tickRange": [
+          0,
+          65280
+        ]
+      },
+      "expected": {
+        "measures": 44,
+        "attacks": 661,
+        "unplayedScoreAttacks": [
+          {
+            "tick": 200,
+            "midiPitch": 65
+          }
+        ],
+        "realizedOrnamentAttacks": 19
+      }
+    },
+    {
+      "id": "bwv862-fugue",
+      "kind": "fugue",
+      "title": "Fugue in A-flat major",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-17-in-a-flat-major-bwv-862/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/17.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "48366ebbc882ef2dc360e3140b9f7392fca9f2ed0e73cce0a3e3695be638581e",
+        "measureRange": [
+          44,
+          79
+        ],
+        "editionNotes": "The reference MIDI inserts 1,920 ticks after the written prelude span. The fugue starts at MIDI tick 65,280."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 719551",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/12/40/QmUrzWELpt4d6eP4no4NUiVfeDSKWorhNC15mCaMmY995p.mid",
+        "pdmxMetadata": "metadata/1/719551.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "50d13b6e000d545a3ca73c2e11d479176d0fbaafeefc86210d58f475ae4dadec",
+        "tickRange": [
+          65280,
+          132480
+        ]
+      },
+      "expected": {
+        "measures": 35,
+        "attacks": 880
+      }
+    }
+  ]
+}

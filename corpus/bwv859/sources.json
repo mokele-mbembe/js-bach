@@ -1,0 +1,132 @@
+{
+  "bwv": "859",
+  "key": "F-sharp minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv859-prelude",
+      "kind": "prelude",
+      "title": "Prelude in F-sharp minor",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-14-in-f-sharp-minor-bwv-859/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/14.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "0f1ef82bc6ad357c746c077312a8fc3bf481710ce9007f7144e84e55b7f7953b",
+        "measureRange": [
+          0,
+          24
+        ],
+        "editionNotes": "The reference MIDI starts on the upper neighbor at the three written inverted mordents. It also delays G-sharp 5 by 63 MIDI ticks in the arpeggiated chord in bar 19."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 719566",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/3/52/Qmdxxoxyesfp5fRBW8gpRcRsb1rcnFcu75P95zoM5kquE5.mid",
+        "pdmxMetadata": "metadata/4/719566.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "c852e7e8c0d8bee0765571d435199001db972fd39c629b71c5b0f25d12c79b21",
+        "tickRange": [
+          0,
+          48960
+        ]
+      },
+      "expected": {
+        "measures": 24,
+        "attacks": 604,
+        "unplayedScoreAttacks": [
+          {
+            "tick": 180,
+            "midiPitch": 75
+          },
+          {
+            "tick": 284,
+            "midiPitch": 71
+          },
+          {
+            "tick": 300,
+            "midiPitch": 80
+          },
+          {
+            "tick": 332,
+            "midiPitch": 65
+          }
+        ],
+        "realizedOrnamentAttacks": 12,
+        "midiOnlyAttacks": [
+          {
+            "tick": 36063,
+            "midiPitch": 80
+          }
+        ]
+      }
+    },
+    {
+      "id": "bwv859-fugue",
+      "kind": "fugue",
+      "title": "Fugue in F-sharp minor",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-14-in-f-sharp-minor-bwv-859/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/14.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "0f1ef82bc6ad357c746c077312a8fc3bf481710ce9007f7144e84e55b7f7953b",
+        "measureRange": [
+          24,
+          64
+        ],
+        "editionNotes": "The reference MIDI inserts 2,880 ticks at the end of the prelude before the fugue. The fugue is aligned at MIDI tick 48,960, and its three inverted mordents start on the upper neighbor in the reference."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 719566",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/3/52/Qmdxxoxyesfp5fRBW8gpRcRsb1rcnFcu75P95zoM5kquE5.mid",
+        "pdmxMetadata": "metadata/4/719566.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "c852e7e8c0d8bee0765571d435199001db972fd39c629b71c5b0f25d12c79b21",
+        "tickRange": [
+          48960,
+          164160
+        ]
+      },
+      "expected": {
+        "measures": 40,
+        "attacks": 808,
+        "unplayedScoreAttacks": [
+          {
+            "tick": 64,
+            "midiPitch": 56
+          },
+          {
+            "tick": 136,
+            "midiPitch": 63
+          },
+          {
+            "tick": 232,
+            "midiPitch": 44
+          }
+        ],
+        "realizedOrnamentAttacks": 12
+      }
+    }
+  ]
+}

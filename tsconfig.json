@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "NodeNext",
+    "rootDir": ".",
+    "outDir": "dist",
+    "types": ["node"],
+    "strict": true,
+    "noEmitOnError": true
+  },
+  "include": ["src", "scripts", "test", "demo"]
+}

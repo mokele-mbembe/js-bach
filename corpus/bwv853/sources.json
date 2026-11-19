@@ -1,0 +1,76 @@
+{
+  "bwv": "853",
+  "key": "E-flat minor / D-sharp minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv853-prelude",
+      "kind": "prelude",
+      "title": "Prelude in E-flat minor",
+      "key": "E-flat minor",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-praeludium-viii-bwv-853/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-praeludium-viii-bwv-853/bach-das-wohltemperierte-clavier-i-praeludium-viii-bwv-853.mxl",
+        "license": "Public Domain",
+        "sha256": "0388e9d543e1c935d70a1f51a40760d9fcfb4f07364895446c249511013a86b6",
+        "editionNotes": "The reference MIDI realizes the written A-flat grace note just before the downbeat of measure 36."
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2008/05/21-563",
+        "typesetter": "Davide Castellone",
+        "sourceEdition": "Breitkopf & Härtel, 1866",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=563",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV853/bwv853a/bwv853a.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV853/bwv853a/bwv853a.ly",
+        "license": "Public Domain",
+        "sha256": "e8b14d27fa423d9e60f1e88ad07a5200fa91e8a39531f18282a0e26b2d3165d8"
+      },
+      "expected": {
+        "measures": 40,
+        "attacks": 681,
+        "overlappingScoreAttacks": 2,
+        "graceNotes": 1,
+        "midiOnlyAttacks": [
+          {
+            "tick": 81364,
+            "midiPitch": 68
+          }
+        ]
+      }
+    },
+    {
+      "id": "bwv853-fugue",
+      "kind": "fugue",
+      "title": "Fugue in D-sharp minor",
+      "key": "D-sharp minor",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-fuga-viii-bwv-853/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-fuga-viii-bwv-853/bach-das-wohltemperierte-clavier-i-fuga-viii-bwv-853.mxl",
+        "license": "Public Domain",
+        "sha256": "fe90f1427b8181cecb395be79e71e9796f5bfd8a83a420b3e5c7745ede3987cc"
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "Mutopia-2006/07/02-597",
+        "typesetter": "Davide Castellone",
+        "sourceEdition": "Breitkopf & Härtel, 1866",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=597",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV853/bwv853b/bwv853b.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV853/bwv853b/bwv853b.ly",
+        "license": "Public Domain",
+        "sha256": "e9fc0a4895d6215d647accb83299c6c89d900073e594566d7451c274cc58cb8d"
+      },
+      "expected": {
+        "measures": 87,
+        "attacks": 1379,
+        "overlappingScoreAttacks": 3
+      }
+    }
+  ]
+}

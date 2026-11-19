@@ -1,0 +1,63 @@
+{
+  "bwv": "846",
+  "key": "C major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv846-prelude",
+      "kind": "prelude",
+      "title": "Prelude in C major",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/partitions/bach-prelude-bwv846/",
+        "download": "https://noctavepiano.com/partitions/bach-prelude-bwv846/bach-prelude-bwv846.mxl",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "1bfe6a105c2285cf22eb13a0d0c3bd46cd8a6c39a7158ce0545d5e5662b55049",
+        "editionNotes": "The MusicXML indicates 66 quarter notes per minute. The Mutopia MIDI uses 60."
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2011/09/12-5",
+        "typesetter": "Tobias Erbsland",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=5",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV846/wtk1-prelude1/wtk1-prelude1.mid",
+        "license": "Public Domain",
+        "sha256": "874e07d0479542971bfceaf420d6117da8d602d89d26eea4610e7dd1ef58bf26"
+      },
+      "expected": { "measures": 35, "attacks": 549 }
+    },
+    {
+      "id": "bwv846-fugue",
+      "kind": "fugue",
+      "title": "Fugue in C major",
+      "voices": [
+        { "name": "Soprano", "ids": ["1"] },
+        { "name": "Alto", "ids": ["2"] },
+        { "name": "Tenor", "ids": ["5"] },
+        { "name": "Bass", "ids": ["6"] }
+      ],
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-fuga-bwv-846/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-fuga-bwv-846/bach-das-wohltemperierte-clavier-i-fuga-bwv-846.mxl",
+        "license": "Public Domain",
+        "sha256": "db81946326133de5aaf0a1b474173595829be6499b629144cbdc233efcd4b984",
+        "editionNotes": "The Mutopia LilyPond source marks a downmordent in the soprano in measure 13. The Noctave MusicXML omits that mark."
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "Mutopia-2013/03/22-4",
+        "typesetter": "Andreas Scherer",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=4",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV846/wtk1-fugue1/wtk1-fugue1.mid",
+        "license": "Public Domain",
+        "sha256": "e89f7d09096bbaf1bcb9e7b5d083c92e396fb9432c956d27185864e17a314ef1"
+      },
+      "expected": { "measures": 27, "attacks": 727 }
+    }
+  ]
+}
