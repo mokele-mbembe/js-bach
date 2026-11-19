@@ -29,13 +29,17 @@ function readZipEntry(archive: Uint8Array, path: string): string {
 }
 
 export function importMxl(archive: Uint8Array): ScoreIR {
+  return importMusicXml(readMxlMusicXml(archive));
+}
+
+export function readMxlMusicXml(archive: Uint8Array): string {
   const container = rootOf(readZipEntry(archive, "META-INF/container.xml"));
   const rootfiles = child(container, "rootfiles");
   const path = rootfiles && child(rootfiles, "rootfile")?.getAttribute("full-path");
   if (container.localName !== "container" || !path) {
     throw new Error("MXL container must identify the score in its first rootfile");
   }
-  return importMusicXml(readZipEntry(archive, path));
+  return readZipEntry(archive, path);
 }
 
 function integer(value: string | undefined, label: string, minimum?: number): number {
@@ -153,7 +157,7 @@ export function importMusicXml(xml: string): ScoreIR {
             break;
           }
           case "note": {
-            if (child(element, "cue") || element.hasAttribute("attack") || element.hasAttribute("release")) {
+            if (child(element, "cue") || element.hasAttribute("attack") || element.hasAttribute("release") || element.hasAttribute("time-only")) {
               throw new Error("Cue and explicitly retimed notes are unsupported");
             }
             const grace = child(element, "grace");
@@ -211,9 +215,22 @@ export function importMusicXml(xml: string): ScoreIR {
             score.tempoChanges.push({ tick: safeTicks(measureStart + cursor), beatsPerMinute });
             break;
           }
-          case "barline":
-            if (child(element, "repeat") || child(element, "ending")) throw new Error("Repeats and endings are unsupported");
+          case "barline": {
+            if (child(element, "ending")) throw new Error("Alternate endings are unsupported");
+            const repeat = child(element, "repeat");
+            if (!repeat) break;
+            const location = element.getAttribute("location") || "right";
+            const direction = repeat.getAttribute("direction");
+            if (repeat.hasAttribute("after-jump")) throw new Error("Conditional repeats are unsupported");
+            if (location === "left" && direction === "forward" && !result.repeatStart && !repeat.hasAttribute("times")) {
+              result.repeatStart = true;
+            } else if (location === "right" && direction === "backward" && result.repeatEnd === undefined) {
+              result.repeatEnd = integer(repeat.getAttribute("times") ?? "2", "repeat times", 1);
+            } else {
+              throw new Error("Unsupported repeat barline");
+            }
             break;
+          }
         }
       }
 

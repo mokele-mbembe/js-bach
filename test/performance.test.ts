@@ -4,6 +4,7 @@ import { movements, readCorpusFile, readMovementScore } from "../scripts/corpus.
 import { importMusicXml, importMxl } from "../src/import-mxl.js";
 import { soloVoice, toPerformance } from "../src/performance.js";
 import { getScoreAttacks, type ScoreIR } from "../src/score-ir.js";
+import { expandWrittenRepeats } from "../src/score-repeats.js";
 
 function expectedNanoseconds(score: ScoreIR, tick: number): number {
   let elapsed = 0;
@@ -28,10 +29,28 @@ for (const movement of movements) {
     const unique = timeline.filter((note, index, events) =>
       index === 0 || note.time !== events[index - 1].time || note.midiPitch !== events[index - 1].midiPitch,
     );
-    assert.deepEqual(unique, getScoreAttacks(score).map(({ tick, midiPitch }) => ({ time: expectedNanoseconds(score, tick), midiPitch })));
+    const performedScore = expandWrittenRepeats(score);
+    assert.deepEqual(unique, getScoreAttacks(performedScore).map(({ tick, midiPitch }) => ({ time: expectedNanoseconds(performedScore, tick), midiPitch })));
     assert.ok(performance.notes.every((note) => note.endSeconds > note.startSeconds && note.endSeconds <= performance.durationSeconds));
   });
 }
+
+test("both an implied repeat start and a written start replay with their initial tempo", () => {
+  const note = (step: string) => `<note><pitch><step>${step}</step><octave>4</octave></pitch><duration>1</duration></note>`;
+  const score = importMusicXml(`
+    <score-partwise version="4.0"><part id="P1">
+      <measure number="1"><attributes><divisions>1</divisions></attributes><sound tempo="60"/>${note("C")}
+        <barline location="right"><repeat direction="backward"/></barline></measure>
+      <measure number="2"><barline location="left"><repeat direction="forward"/></barline>${note("D")}</measure>
+      <measure number="3"><sound tempo="120"/>${note("E")}
+        <barline location="right"><repeat direction="backward" times="2"/></barline></measure>
+    </part></score-partwise>`);
+  assert.deepEqual(score.measures.map(({ repeatStart, repeatEnd }) => [repeatStart, repeatEnd]), [[undefined, 2], [true, undefined], [undefined, 2]]);
+  const performance = toPerformance(score);
+  assert.deepEqual(performance.notes.map(({ startSeconds, midiPitch }) => [startSeconds, midiPitch]),
+    [[0, 60], [1, 60], [2, 62], [3, 64], [3.5, 62], [4.5, 64]]);
+  assert.equal(performance.durationSeconds, 5);
+});
 
 test("the Fugue sustains a four-measure bass tie and keeps coincident voices distinct", () => {
   const movement = movements.find(({ id }) => id === "bwv846-fugue");

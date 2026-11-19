@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { importMxl } from "../src/import-mxl.js";
 import type { Attack, ScoreIR } from "../src/score-ir.js";
+import { sliceScore } from "./score-slice.js";
 
 interface CorpusFile {
   file: string;
@@ -86,23 +87,10 @@ export function readMovementScore({ bwv, id, title, composer, score: input }: (t
   if (!input.measureRange) return score;
 
   // The manifest uses zero-based, half-open measure indices for a combined score.
-  const [start, end] = input.measureRange;
-  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || start >= end || end > score.measures.length) {
-    throw new Error(`Invalid measure range for ${id}`);
-  }
-  const firstTick = score.measures[start].startTick;
-  const last = score.measures[end - 1];
-  const endTick = last.startTick + last.durationTicks;
-  const tempoChanges = score.tempoChanges.filter(({ tick }) => firstTick <= tick && tick < endTick)
-    .map((tempo) => ({ ...tempo, tick: tempo.tick - firstTick }));
-  const inheritedTempo = score.tempoChanges.filter(({ tick }) => tick < firstTick).at(-1);
-  if (inheritedTempo && tempoChanges[0]?.tick !== 0) tempoChanges.unshift({ ...inheritedTempo, tick: 0 });
   return {
-    ...score,
+    ...sliceScore(score, input.measureRange, id),
     workNumber: score.workNumber ?? `BWV ${bwv}`,
     title,
     composer: score.composer ?? composer,
-    tempoChanges,
-    measures: score.measures.slice(start, end).map((measure) => ({ ...measure, startTick: measure.startTick - firstTick })),
   };
 }

@@ -36,6 +36,8 @@ export interface MeasureIR {
   number: string;
   startTick: number;
   durationTicks: number;
+  repeatStart?: true;
+  repeatEnd?: number;
   events: (NoteEvent | RestEvent)[];
 }
 

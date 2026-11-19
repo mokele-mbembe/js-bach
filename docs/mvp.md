@@ -23,7 +23,7 @@
 
 导入里程碑已完成。原始 `.mxl`、参考 MIDI 和来源记录位于 `corpus/bwv846/`，两乐章的起音基准可在本地离线复验。 [来源清单](../corpus/bwv846/sources.json) · [运行命令](../README.md#import-the-corpus)
 
-播放器里程碑已完成。浏览器 demo 从导入后的 Score IR 播放两乐章，赋格的独奏试听从所选声部第一次进入开始。 [运行命令](../README.md#play-bwv-846863) · [演奏事件测试](../test/performance.test.ts)
+播放器里程碑已完成。浏览器 demo 从导入后的 Score IR 播放两乐章，赋格的独奏试听从所选声部第一次进入开始。 [运行命令](../README.md#play-bwv-846869) · [演奏事件测试](../test/performance.test.ts)
 
 节奏模板里程碑已完成。前奏曲第 1–32 小节复用同一个模板，第 33–34 小节复用另一个模板，第 35 小节保留原事件。赋格的整小节节奏编码保留原事件。构建前校验两乐章的展开结果，demo 标出复用位置并显示两种编码的 Brotli 大小。 [复验命令](../README.md#compare-rhythm-encoding)
 
@@ -46,3 +46,9 @@ BWV 858 与 859 采用 OpenWTC 的 CC0 版，分别保留 PDMX 和 Artform 的�
 BWV 860 与 861 采用标为公有领域的 Noctave MusicXML 和同源 Mutopia MIDI。其中三个乐章的起音完全吻合。BWV 860 赋格第 60、85 小节的两处同音重叠保留谱面起音，校验逐一确认对应 MIDI 的持续音。构建汇总表与 demo 扩到 BWV 846–861 的 32 个乐章。 [BWV 860 来源清单](../corpus/bwv860/sources.json) · [BWV 861 来源清单](../corpus/bwv861/sources.json)
 
 BWV 862 与 863 采用 OpenWTC 的 CC0 版，保留 Artform 原始 MusicXML 合卷，并用 PDMX 同版 MIDI 分乐章核对。BWV 862 前奏曲第 33–34 小节的降 A 延音与 Hawryluk 的 LilyPond 源谱一致。两首赋格的起音完全吻合，两首前奏曲的差异对应 MIDI 对谱面装饰音的演奏。构建汇总表与 demo 扩到 BWV 846–863 的 36 个乐章。 [BWV 862 来源清单](../corpus/bwv862/sources.json) · [BWV 863 来源清单](../corpus/bwv863/sources.json)
+
+BWV 864 采用 Artform 的 OpenWTC CC0 合卷和 PDMX 同版 MIDI。所有谱面起音均吻合，MIDI 额外的起音来自前奏曲第 3、14 小节的逆波音和赋格第 8、26 小节的颤音。BWV 865 采用公有领域的 Noctave MusicXML 和同源 Mutopia MIDI，两个乐章的起音完全吻合。原子发布的构建汇总表和 demo 扩到 BWV 846–865 的 40 个乐章。 [BWV 864 来源清单](../corpus/bwv864/sources.json) · [BWV 865 来源清单](../corpus/bwv865/sources.json)
+
+BWV 866 与 867 用 `audit:sources` 审核 Artform 原始 MusicXML 合卷和 PDMX 同版 MIDI。两套文件均为 OpenWTC CC0 版，所有谱面起音均吻合。BWV 866 前奏曲第 19 小节的下波音有 2 个额外 MIDI 起音，BWV 867 赋格第 49 小节的颤音有 15 个。汇总表与 demo 扩到 BWV 846–867 的 44 个乐章。 [BWV 866 来源清单](../corpus/bwv866/sources.json) · [BWV 867 来源清单](../corpus/bwv867/sources.json)
+
+BWV 868 与 869 均采用 OpenWTC CC0 版。BWV 868 的 MusicXML 和 MIDI 来自 PDMX 同一条目。前奏曲起音完全吻合，赋格的差异对应源谱第 21 小节的颤音与第 42 小节从上方邻音开始的逆波音。BWV 869 的 Artform MusicXML 与 PDMX 同版 MIDI 的差异均来自装饰音。其前奏曲的 47 个谱面小节保留两段反复记号，起音校验与播放器按 94 个小节展开。汇总表与 demo 覆盖第一卷 BWV 846–869 的全部 48 个乐章。 [BWV 868 来源清单](../corpus/bwv868/sources.json) · [BWV 869 来源清单](../corpus/bwv869/sources.json)

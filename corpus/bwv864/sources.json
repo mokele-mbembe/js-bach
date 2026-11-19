@@ -1,0 +1,82 @@
+{
+  "bwv": "864",
+  "key": "A major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv864-prelude",
+      "kind": "prelude",
+      "title": "Prelude in A major",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-19-in-a-major-bwv-864/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/19.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "54fc453a2f4fa0eb4208d7ab86330daee16378235d7b89b8aaa8cdc9a45104b9",
+        "measureRange": [0, 24],
+        "editionNotes": "All four additional MIDI attacks occur within the written inverted mordents in measures 3 and 14."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 541011",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/10/3/QmS4tEZneYPVEkRd8GfHijieDCLeVs5ZDLQdLNJUcs8WgR.mid",
+        "pdmxMetadata": "metadata/5/541011.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "4b013d4efee32d243f575a0d6fa7aa466bd9aab2ab02055099eac57e2bb053da",
+        "tickRange": [0, 46080]
+      },
+      "expected": {
+        "measures": 24,
+        "attacks": 599,
+        "realizedOrnamentAttacks": 4
+      }
+    },
+    {
+      "id": "bwv864-fugue",
+      "kind": "fugue",
+      "title": "Fugue in A major",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-19-in-a-major-bwv-864/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/19.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "54fc453a2f4fa0eb4208d7ab86330daee16378235d7b89b8aaa8cdc9a45104b9",
+        "measureRange": [24, 78],
+        "editionNotes": "All 12 additional MIDI attacks occur within the written trills in measures 8 and 26."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 541011",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/10/3/QmS4tEZneYPVEkRd8GfHijieDCLeVs5ZDLQdLNJUcs8WgR.mid",
+        "pdmxMetadata": "metadata/5/541011.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "4b013d4efee32d243f575a0d6fa7aa466bd9aab2ab02055099eac57e2bb053da",
+        "tickRange": [46080, 162000]
+      },
+      "expected": {
+        "measures": 54,
+        "attacks": 1172,
+        "realizedOrnamentAttacks": 12
+      }
+    }
+  ]
+}

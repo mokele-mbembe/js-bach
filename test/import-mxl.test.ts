@@ -1,70 +1,25 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseMidi } from "midi-file";
 import { movements, readCorpusFile, readMovementScore } from "../scripts/corpus.js";
 import { importMusicXml, importMxl } from "../src/import-mxl.js";
 import { getScoreAttacks, midiPitch, type Attack } from "../src/score-ir.js";
-
-function attackKey({ tick, midiPitch }: Attack): string {
-  return `${tick}:${midiPitch}`;
-}
-
-function readReference(data: Uint8Array, [startTick, endTick] = [0, Infinity]) {
-  const midi = parseMidi(data);
-  const ticksPerQuarter = midi.header.ticksPerBeat;
-  assert.ok(ticksPerQuarter, "Expected a MIDI reference with quarter-note timing");
-
-  const attacks = new Map<string, Attack>();
-  const holds = new Map<number, { start: number; end: number }[]>();
-  for (const track of midi.tracks) {
-    let tick = 0;
-    const active = new Map<string, number[]>();
-    for (const event of track) {
-      tick += event.deltaTime;
-      if (event.type !== "noteOn" && event.type !== "noteOff") continue;
-      const { noteNumber: midiPitch, channel } = event;
-      const key = `${channel}:${midiPitch}`;
-      if (event.type === "noteOn" && event.velocity > 0) {
-        if (startTick <= tick && tick < endTick) {
-          const attack = { tick: tick - startTick, midiPitch };
-          attacks.set(attackKey(attack), attack);
-        }
-        const starts = active.get(key) ?? [];
-        starts.push(tick);
-        active.set(key, starts);
-      } else {
-        const start = active.get(key)?.shift();
-        assert.ok(start !== undefined, `Unmatched MIDI note-off at tick ${tick}, pitch ${midiPitch}`);
-        const intervals = holds.get(midiPitch) ?? [];
-        intervals.push({ start: start - startTick, end: tick - startTick });
-        holds.set(midiPitch, intervals);
-      }
-    }
-    assert.ok([...active.values()].every((starts) => starts.length === 0), "Unclosed note in MIDI reference");
-  }
-  return { attacks, holds, ticksPerQuarter };
-}
+import { attackKey, compareSourceAttacks, describeMidiDifferences } from "../scripts/source-attacks.js";
 
 for (const movement of movements) {
   test(`${movement.id} matches the upstream MIDI attack baseline with documented differences`, () => {
     const score = readMovementScore(movement);
     assert.equal(score.workNumber, `BWV ${movement.bwv}`);
     assert.equal(score.measures.length, movement.expected.measures);
-    const reference = readReference(readCorpusFile(movement.referenceMidi), movement.referenceMidi.tickRange);
-    const toMidiTick = (tick: number) => tick * reference.ticksPerQuarter / score.ticksPerQuarter;
-    const attacks = getScoreAttacks(score);
+    const { performedScore, reference, toMidiTick, attacks, midiGrid, scoreOnly, midiOnly } =
+      compareSourceAttacks(score, readCorpusFile(movement.referenceMidi), movement.referenceMidi.tickRange);
     assert.equal(attacks.length, movement.expected.attacks);
-    const midiGrid = attacks.map((attack) => {
-      const tick = toMidiTick(attack.tick);
-      assert.ok(Number.isSafeInteger(tick), `Score onset ${attack.tick} is outside the reference tick grid`);
-      return { ...attack, tick };
-    });
-    const scoreKeys = new Set(midiGrid.map(attackKey));
+    for (const { tick, scoreTick } of midiGrid) {
+      assert.ok(Number.isSafeInteger(tick), `Score onset ${scoreTick} is outside the reference tick grid`);
+    }
     // Score-only pairs in the manifest use Score IR ticks. MIDI-only pairs use the reference's native ticks.
     const toMidiKey = (attack: Attack) => attackKey({ ...attack, tick: toMidiTick(attack.tick) });
     const knownScoreOnly = new Set((movement.expected.scoreOnlyAttacks ?? []).map(toMidiKey));
     const unplayed = new Set((movement.expected.unplayedScoreAttacks ?? []).map(toMidiKey));
-    const scoreOnly = midiGrid.filter((attack) => !reference.attacks.has(attackKey(attack)));
     assert.equal(scoreOnly.length, unplayed.size + knownScoreOnly.size + (movement.expected.overlappingScoreAttacks ?? 0));
     for (const attack of scoreOnly) {
       const key = attackKey(attack);
@@ -77,51 +32,13 @@ for (const movement of movements) {
     assert.equal(knownScoreOnly.size, 0, "Documented score-only attacks must be present");
     assert.equal(unplayed.size, 0, "Documented MIDI omissions must be present in the score");
 
-    const midiOnly = [...reference.attacks.values()].filter((attack) => !scoreKeys.has(attackKey(attack)))
-      .sort((a, b) => a.tick - b.tick || a.midiPitch - b.midiPitch);
-    const graceNotes: Attack[] = [];
-    const continuations = new Set<string>();
-    const arpeggiatedNotes: { start: number; end: number; midiPitch: number }[] = [];
-    const writtenOrnaments: { start: number; end: number; midiPitch: number; voice: string; tieStart: boolean }[] = [];
-    for (const measure of score.measures) {
-      for (const note of measure.events) {
-        if (note.kind !== "note") continue;
-        const attack = { tick: toMidiTick(measure.startTick + note.offsetTicks), midiPitch: midiPitch(note.pitch) };
-        if (note.grace) {
-          assert.equal(note.durationTicks, 0);
-          graceNotes.push(attack);
-        }
-        if (note.tieStop) continuations.add(attackKey(attack));
-        const previous = note.tieStop ? writtenOrnaments.find(({ end, midiPitch, voice, tieStart }) =>
-          tieStart && end === attack.tick && midiPitch === attack.midiPitch && voice === note.voice,
-        ) : undefined;
-        const end = attack.tick + toMidiTick(note.durationTicks);
-        if (note.notations.some(({ kind }) => kind === "arpeggiate")) {
-          arpeggiatedNotes.push({ start: attack.tick, end, midiPitch: attack.midiPitch });
-        }
-        if (previous) {
-          previous.end = end;
-          previous.tieStart = note.tieStart;
-        } else if (note.notations.some(({ kind }) => kind === "trill-mark" || kind === "inverted-mordent")) {
-          writtenOrnaments.push({ start: attack.tick, end, midiPitch: attack.midiPitch, voice: note.voice, tieStart: note.tieStart });
-        }
-      }
-    }
+    const { graceNotes, differences } = describeMidiDifferences(performedScore, toMidiTick, midiOnly);
     assert.equal(graceNotes.length, movement.expected.graceNotes ?? 0);
-    const otherMidiOnly = midiOnly.filter((attack) => !writtenOrnaments.some(({ start, end, midiPitch }) => {
-      const interval = attack.midiPitch - midiPitch;
-      return start <= attack.tick && attack.tick < end && interval >= 0 && interval <= 2;
-    }));
-    assert.equal(midiOnly.length - otherMidiOnly.length, movement.expected.realizedOrnamentAttacks ?? 0);
-    assert.deepEqual(otherMidiOnly, movement.expected.midiOnlyAttacks ?? []);
-    for (const attack of otherMidiOnly) {
-      const earlyGrace = graceNotes.some((note) =>
-        note.midiPitch === attack.midiPitch && attack.tick < note.tick && note.tick - attack.tick <= reference.ticksPerQuarter / 2,
-      );
-      const staggeredChord = arpeggiatedNotes.some(({ start, end, midiPitch }) =>
-        midiPitch === attack.midiPitch && start < attack.tick && attack.tick < end,
-      );
-      assert.ok(earlyGrace || staggeredChord || continuations.has(attackKey(attack)),
+    const other = differences.filter((difference) => difference.ornaments.length === 0);
+    assert.equal(differences.length - other.length, movement.expected.realizedOrnamentAttacks ?? 0);
+    assert.deepEqual(other.map(({ attack }) => attack), movement.expected.midiOnlyAttacks ?? []);
+    for (const { attack, earlyGrace, staggeredChord, tieContinuation } of other) {
+      assert.ok(earlyGrace || staggeredChord || tieContinuation,
         `MIDI-only attack at tick ${attack.tick}, pitch ${attack.midiPitch} must match a grace note, arpeggiated note or tie continuation`);
     }
   });
@@ -191,9 +108,9 @@ test("the score tick grid preserves exact positions when divisions change", () =
   ]);
 });
 
-test("an unsupported repeat is reported with its part and measure", () => {
+test("an unsupported alternate ending is reported with its part and measure", () => {
   assert.throws(() => importMusicXml(`
     <score-partwise version="4.0"><part id="P1"><measure number="7">
-      <barline location="right"><repeat direction="backward"/></barline>
-    </measure></part></score-partwise>`), /Part P1, measure 7: Repeats and endings are unsupported/);
+      <barline location="right"><ending number="1" type="stop"/><repeat direction="backward"/></barline>
+    </measure></part></score-partwise>`), /Part P1, measure 7: Alternate endings are unsupported/);
 });

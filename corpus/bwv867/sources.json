@@ -1,0 +1,92 @@
+{
+  "bwv": "867",
+  "key": "B-flat minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv867-prelude",
+      "kind": "prelude",
+      "title": "Prelude in B-flat minor",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-22-in-b-flat-minor-bwv-867/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/22.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "3a1ee1d66a0e66ff6bcb3e3b0ba0d800c38d6f422c6f10bb2a7e9ac6b2bc59f1",
+        "measureRange": [
+          0,
+          24
+        ]
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 540991",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/9/11/QmRbTC1YvMYRMRfjjqpgwjws5KsTeiVgNBhcWGJzbVEw84.mid",
+        "pdmxMetadata": "metadata/2/540991.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "eb57402b0d4990f18415a833276a4565d38acd8909646573c55d0633e1ee59eb",
+        "tickRange": [
+          0,
+          46080
+        ]
+      },
+      "expected": {
+        "measures": 24,
+        "attacks": 778
+      }
+    },
+    {
+      "id": "bwv867-fugue",
+      "kind": "fugue",
+      "title": "Fugue in B-flat minor",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-22-in-b-flat-minor-bwv-867/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/22.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "3a1ee1d66a0e66ff6bcb3e3b0ba0d800c38d6f422c6f10bb2a7e9ac6b2bc59f1",
+        "measureRange": [
+          24,
+          99
+        ],
+        "editionNotes": "All 15 extra MIDI attacks occur during the written trill on G-flat 4 in measure 49."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 540991",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/9/11/QmRbTC1YvMYRMRfjjqpgwjws5KsTeiVgNBhcWGJzbVEw84.mid",
+        "pdmxMetadata": "metadata/2/540991.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "eb57402b0d4990f18415a833276a4565d38acd8909646573c55d0633e1ee59eb",
+        "tickRange": [
+          46080,
+          190080
+        ]
+      },
+      "expected": {
+        "measures": 75,
+        "attacks": 734,
+        "realizedOrnamentAttacks": 15
+      }
+    }
+  ]
+}

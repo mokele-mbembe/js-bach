@@ -1,4 +1,5 @@
 import { midiPitch, type ScoreIR, type WrittenPitch } from "./score-ir.js";
+import { expandWrittenRepeats } from "./score-repeats.js";
 
 export interface PerformanceNote {
   startSeconds: number;
@@ -91,7 +92,8 @@ function scoreClock({ ticksPerQuarter, tempoChanges }: ScoreIR): (tick: number) 
   };
 }
 
-export function toPerformance(score: ScoreIR): Performance {
+export function toPerformance(writtenScore: ScoreIR): Performance {
+  const score = expandWrittenRepeats(writtenScore);
   const secondsAt = scoreClock(score);
   const notes = joinTies(score).map(({ startTick, endTick, ...note }) => ({
     ...note,
