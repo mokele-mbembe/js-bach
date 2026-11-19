@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { DOMParser, onErrorStopParsing } from "@xmldom/xmldom";
 import { importMusicXml, readMxlMusicXml } from "../src/import-mxl.js";
 import { compareSourceAttacks, describeMidiDifferences } from "./source-attacks.js";
@@ -16,6 +16,8 @@ interface InputFile {
   source?: string;
   download?: string;
   sha256?: string;
+  license?: string;
+  licenseUrl?: string;
   pdmxScoreId?: string;
   pdmxMetadata?: string;
   archiveMember?: string;
@@ -91,6 +93,7 @@ interface FileEvidence {
   download: string;
   sha256: string;
   expectedSha256?: string;
+  declaredLicense?: { name: string; url?: string };
   pdmxIndex?: PdmxRow;
 }
 
@@ -111,16 +114,22 @@ function markdown(bwv: string, movements: AuditedMovement[]) {
     lines.push("", `## ${m.kind === "prelude" ? "Prelude" : "Fugue"}`, "",
       `Score measure indices [${m.measureRange.join(", ")}) and MIDI tick range ${m.tickRange ? `[${m.tickRange.join(", ")})` : "entire file"}. MIDI ticks below are absolute within the reference file.`, "");
     if (m.performedMeasures !== m.measures) lines.push(`The repeat signs expand ${m.measures} written measures to ${m.performedMeasures} performed measures.`, "");
-    for (const file of [m.score, m.referenceMidi]) {
+    const inputs = [["MusicXML", m.score, m.rights], ["Reference MIDI", m.referenceMidi, []]] as const;
+    for (const [label, file, rights] of inputs) {
       const origin = file.source ?? file.download;
-      lines.push(`- \`${file.file}\` SHA-256 \`${file.sha256}\` (${file.expectedSha256 ? "matched supplied checksum" : "recorded for review"}). [Source](${origin})`);
-    }
-    for (const notice of m.rights) {
-      if (notice) lines.push(`- Embedded MusicXML rights statement\n\n  > ${notice.replace(/\s+/g, " ")}`);
-    }
-    const row = m.referenceMidi.pdmxIndex ?? m.score.pdmxIndex;
-    if (row) {
-      lines.push(`- PDMX lists “${row.title}” at \`${row.metadata}\` with license \`${row.license}\` and conflict flag \`${row.licenseConflict}\`. [Reported license](${row.licenseUrl})`);
+      lines.push(`- ${label} \`${file.file}\` — SHA-256 \`${file.sha256}\` (${file.expectedSha256 ? "matched supplied checksum" : "recorded for review"}). [Source](${origin})`);
+      const declared = file.declaredLicense;
+      if (declared) {
+        const license = declared.url ? `[${declared.name}](${declared.url})` : `\`${declared.name}\``;
+        lines.push(`  - License declared by the candidate — ${license}.`);
+      }
+      const row = file.pdmxIndex;
+      if (row) {
+        lines.push(`  - PDMX lists “${row.title}” at \`${row.metadata}\` with license \`${row.license}\` and conflict flag \`${row.licenseConflict}\`. [Reported license](${row.licenseUrl})`);
+      }
+      for (const notice of rights) {
+        if (notice) lines.push(`  - Embedded MusicXML rights statement\n\n    > ${notice.replace(/\s+/g, " ")}`);
+      }
     }
     if (m.scoreOnly.length > 0) {
       lines.push("", "| Measure | Score tick | MIDI tick | MIDI pitch | Within MIDI hold |", "| --- | ---: | ---: | ---: | --- |",
@@ -140,7 +149,6 @@ function markdown(bwv: string, movements: AuditedMovement[]) {
   return [...lines, ""].join("\n");
 }
 
-const output = fileURLToPath(new URL("../source-audit/", import.meta.url));
 type PdmxInputs = Awaited<ReturnType<typeof preparePdmx>>;
 
 function resolveAsset(input: InputFile, format: "mxl" | "mid", pdmx?: PdmxInputs) {
@@ -150,18 +158,17 @@ function resolveAsset(input: InputFile, format: "mxl" | "mid", pdmx?: PdmxInputs
     return { download: input.download };
   }
   const row = pdmx?.rows.get(selector);
-  assert.ok(row, `Missing PDMX row for ${selector}`);
-  const { download, archive, member } = format === "mxl"
-    ? { download: pdmxScoreUrl, archive: pdmx?.scoreArchive, member: row.scoreArchiveMember }
-    : { download: pdmxMidiUrl, archive: pdmx?.midiArchive, member: row.archiveMember };
-  assert.ok(archive, `Expected a verified PDMX ${format} archive`);
+  assert.ok(pdmx && row, `${selector} was not found in PDMX v9`);
+  const { download, member } = format === "mxl"
+    ? { download: pdmxScoreUrl, member: row.scoreArchiveMember }
+    : { download: pdmxMidiUrl, member: row.archiveMember };
   if (input.archiveMember) assert.equal(input.archiveMember.replace(/^\.\//, ""), member);
   if (input.pdmxMetadata) assert.equal(input.pdmxMetadata.replace(/^\.\//, ""), row.metadata);
   if (input.download) assert.equal(input.download, download, "This audit supports PDMX v9");
-  return { download, archive, member, row };
+  return { download, archive: () => pdmx.archive(format), member, row };
 }
 
-async function auditCandidate({ bwv, movements }: Awaited<ReturnType<typeof readCandidate>>, pdmx?: PdmxInputs) {
+async function auditCandidate({ bwv, movements }: Awaited<ReturnType<typeof readCandidate>>, output: string, pdmx?: PdmxInputs) {
   const directory = await mkdtemp(join(output, `bwv${bwv}-`));
   const downloaded = new Map<string, { file: string; bytes: Buffer }>();
   const filenames = new Set<string>();
@@ -171,18 +178,20 @@ async function auditCandidate({ bwv, movements }: Awaited<ReturnType<typeof read
     if (!asset) {
       const file = input.file ?? fallbackName;
       assert.match(file, /^[a-zA-Z0-9][a-zA-Z0-9_.-]*\.(mxl|mid)$/, `Expected a local filename for ${key}`);
-      assert.ok(!filenames.has(file), `Different inputs use the same filename ${file}`);
+      const normalizedFile = file.toLowerCase();
+      assert.ok(!filenames.has(normalizedFile), `Different inputs use the same filename (ignoring case) ${file}`);
       const path = join(directory, file);
       if (archive && member) {
-        await writeFile(path, await extractPdmxFile(archive, member));
+        await writeFile(path, await extractPdmxFile(await archive(), member));
       } else await downloadSource(download, path);
       asset = { file, bytes: await readFile(path) };
       downloaded.set(key, asset);
-      filenames.add(file);
+      filenames.add(normalizedFile);
     }
     const sha256 = verifySourceBytes(asset.bytes, input.sha256, key);
     return { bytes: asset.bytes, evidence: {
       file: asset.file, source: input.source ?? (row ? pdmxRelease : undefined), download, sha256, expectedSha256: input.sha256, pdmxIndex: row,
+      declaredLicense: input.license ? { name: input.license, url: input.licenseUrl } : undefined,
     } };
   }
 
@@ -211,31 +220,45 @@ async function auditCandidate({ bwv, movements }: Awaited<ReturnType<typeof read
     }
     await writeFile(join(directory, "attack-diff.json"), `${JSON.stringify({ bwv, editionAndLicense: "manual review required", movements: reports }, null, 2)}\n`);
     await writeFile(join(directory, "attack-diff.md"), markdown(bwv, reports));
-    for (const m of reports) console.log(`BWV ${bwv} ${m.kind} — ${m.matchingAttacks} matched, ${m.scoreOnly.length} score only, ${m.midiOnly.length} MIDI only`);
-    console.log(join(directory, "attack-diff.md"));
+    return { bwv, directory, reports };
   } catch (error) {
     await rm(directory, { recursive: true, force: true });
     throw error;
   }
 }
 
-const paths = process.argv.slice(2);
-if (paths.length === 0 || paths.includes("--help")) {
-  console.log("Usage: npm run audit:sources -- <candidate.json> [candidate.json ...]");
-  process.exit(paths.length === 0 ? 1 : 0);
+export async function auditSources(paths: string[], output: string, loadPdmx = preparePdmx) {
+  const candidates = await Promise.allSettled(paths.map(async (path) => {
+    const candidate = await readCandidate(path);
+    const selectors = candidate.movements.flatMap(({ score, referenceMidi }) => [pdmxSelector(score), pdmxSelector(referenceMidi)]);
+    return { candidate, selectors: selectors.filter((selector): selector is string => selector !== undefined) };
+  }));
+  const requested = new Set(candidates.flatMap((entry) => entry.status === "fulfilled" ? entry.value.selectors : []));
+  await mkdir(output, { recursive: true });
+  const pdmx = requested.size ? loadPdmx(join(output, "cache", "pdmx-v9"), requested) : undefined;
+  return Promise.allSettled(candidates.map(async (entry) => {
+    if (entry.status === "rejected") throw entry.reason;
+    const { candidate, selectors } = entry.value;
+    return auditCandidate(candidate, output, selectors.length ? await pdmx : undefined);
+  }));
 }
-const candidates = await Promise.all(paths.map(readCandidate));
-const selectors = candidates.flatMap(({ movements }) => movements.flatMap(({ score, referenceMidi }) => [pdmxSelector(score), pdmxSelector(referenceMidi)]));
-const requested = new Set(selectors.filter((selector): selector is string => selector !== undefined));
-const needsScore = candidates.some(({ movements }) => movements.some(({ score }) => pdmxSelector(score)));
-await mkdir(output, { recursive: true });
-const pdmx = requested.size ? preparePdmx(join(output, "cache", "pdmx-v9"), requested, needsScore) : undefined;
-const results = await Promise.allSettled(candidates.map(async (candidate) =>
-  auditCandidate(candidate, candidate.movements.some(({ score, referenceMidi }) => pdmxSelector(score) || pdmxSelector(referenceMidi)) ? await pdmx : undefined),
-));
-for (const [index, result] of results.entries()) {
-  if (result.status === "rejected") {
-    console.error(`${paths[index]} — ${result.reason instanceof Error ? result.reason.message : result.reason}`);
-    process.exitCode = 1;
+
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  const paths = process.argv.slice(2);
+  if (paths.length === 0 || paths.includes("--help")) {
+    console.log("Usage: npm run audit:sources -- <candidate.json> [candidate.json ...]");
+    process.exit(paths.length === 0 ? 1 : 0);
+  }
+  const output = fileURLToPath(new URL("../source-audit/", import.meta.url));
+  const results = await auditSources(paths, output);
+  for (const [index, result] of results.entries()) {
+    if (result.status === "rejected") {
+      console.error(`${paths[index]} — ${result.reason instanceof Error ? result.reason.message : result.reason}`);
+      process.exitCode = 1;
+    } else {
+      const { bwv, directory, reports } = result.value;
+      for (const m of reports) console.log(`BWV ${bwv} ${m.kind} — ${m.matchingAttacks} matched, ${m.scoreOnly.length} score only, ${m.midiOnly.length} MIDI only`);
+      console.log(join(directory, "attack-diff.md"));
+    }
   }
 }

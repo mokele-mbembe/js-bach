@@ -43,15 +43,21 @@ export async function readPdmxRows(path: string, requested: Set<string>) {
       }
     }
   });
-  for (const key of requested) assert.ok(rows.has(key), `${key} was not found in PDMX v9`);
   return rows;
 }
 
-export async function preparePdmx(cache: string, requested: Set<string>, needsScore: boolean) {
-  const [indexPath, midiArchive, scoreArchive] = await Promise.all([
-    acquireReleaseFile(cache, index), acquireReleaseFile(cache, midi), needsScore ? acquireReleaseFile(cache, score) : undefined,
-  ]);
-  return { rows: await readPdmxRows(indexPath, requested), midiArchive, scoreArchive };
+export async function preparePdmx(cache: string, requested: Set<string>) {
+  const rows = await readPdmxRows(await acquireReleaseFile(cache, index), requested);
+  const archives = new Map<"mxl" | "mid", Promise<string>>();
+  function archive(format: "mxl" | "mid") {
+    let path = archives.get(format);
+    if (!path) {
+      path = acquireReleaseFile(cache, format === "mxl" ? score : midi);
+      archives.set(format, path);
+    }
+    return path;
+  }
+  return { rows, archive };
 }
 
 export async function extractPdmxFile(archive: string, member: string): Promise<Buffer> {

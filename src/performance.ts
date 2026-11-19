@@ -1,5 +1,6 @@
-import { midiPitch, type ScoreIR, type WrittenPitch } from "./score-ir.js";
+import { midiPitch, type ScoreIR } from "./score-ir.js";
 import { expandWrittenRepeats } from "./score-repeats.js";
+import { tieKey, tieStartVoice } from "./score-ties.js";
 
 export interface PerformanceNote {
   startSeconds: number;
@@ -20,10 +21,6 @@ interface NoteSpan {
   voice: string;
 }
 
-function tieKey(tick: number, { step, alter, octave }: WrittenPitch): string {
-  return JSON.stringify([tick, step, alter, octave]);
-}
-
 function joinTies(score: ScoreIR): NoteSpan[] {
   const segments = score.measures.flatMap((measure) => measure.events.flatMap((event) =>
     event.kind === "note" && !event.grace
@@ -40,9 +37,7 @@ function joinTies(score: ScoreIR): NoteSpan[] {
     if (tieStop) {
       const key = tieKey(startTick, pitch);
       const continuations = pending.get(key);
-      // A single matching tie can continue under a different exported voice ID.
-      const previousVoice = continuations?.has(voice) ? voice : continuations?.size === 1
-        ? continuations.keys().next().value : undefined;
+      const previousVoice = tieStartVoice(continuations, voice);
       const previous = previousVoice === undefined ? undefined : continuations?.get(previousVoice);
       if (!continuations || previousVoice === undefined || !previous) {
         throw new Error(`Unmatched tie continuation in measure ${measure}, voice ${voice}`);

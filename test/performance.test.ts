@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { writeMidi, type MidiEvent } from "midi-file";
 import { movements, readCorpusFile, readMovementScore } from "../scripts/corpus.js";
+import { compareSourceAttacks } from "../scripts/source-attacks.js";
 import { importMusicXml, importMxl } from "../src/import-mxl.js";
 import { soloVoice, toPerformance } from "../src/performance.js";
 import { getScoreAttacks, type ScoreIR } from "../src/score-ir.js";
@@ -51,6 +53,43 @@ test("both an implied repeat start and a written start replay with their initial
     [[0, 60], [1, 60], [2, 62], [3, 64], [3.5, 62], [4.5, 64]]);
   assert.equal(performance.durationSeconds, 5);
 });
+
+const repeatTieCases: { name: string; ending: string; spans: [number, number, number][] }[] = [
+  { name: "cuts a tie whose destination is skipped and attacks a note whose tie source is skipped", ending: "G",
+    spans: [[0, 2, 60], [2, 3, 67], [3, 4, 60], [4, 6, 67]] },
+  { name: "sustains a compatible tie across the jump", ending: "C", spans: [[0, 2, 60], [2, 4, 60], [4, 6, 60]] },
+];
+for (const { name, ending, spans } of repeatTieCases) {
+  test(`playback and MIDI attack comparison agree when a repeat ${name}`, () => {
+    const note = (step: string, tie: string) =>
+      `<note><pitch><step>${step}</step><octave>4</octave></pitch><duration>1</duration><tie type="${tie}"/></note>`;
+    const score = importMusicXml(`
+      <score-partwise version="4.0"><part id="P1">
+        <measure number="1"><attributes><divisions>1</divisions></attributes>${note("C", "start")}</measure>
+        <measure number="2"><barline location="left"><repeat direction="forward"/></barline>${note("C", "stop")}</measure>
+        <measure number="3">${note(ending, "start")}<barline location="right"><repeat direction="backward"/></barline></measure>
+        <measure number="4">${note(ending, "stop")}</measure>
+      </part></score-partwise>`);
+    const written = structuredClone(score);
+    const track: MidiEvent[] = [];
+    let tick = 0;
+    for (const [start, end, noteNumber] of spans) {
+      track.push({ type: "noteOn", deltaTime: start - tick, channel: 0, noteNumber, velocity: 64 },
+        { type: "noteOff", deltaTime: end - start, channel: 0, noteNumber, velocity: 0 });
+      tick = end;
+    }
+    track.push({ type: "endOfTrack", deltaTime: 0, meta: true });
+    const midi = Uint8Array.from(writeMidi({ header: { format: 0, numTracks: 1, ticksPerBeat: 1 }, tracks: [track] }));
+    const { attacks, scoreOnly, midiOnly } = compareSourceAttacks(score, midi);
+    assert.deepEqual(attacks, spans.map(([tick, , midiPitch]) => ({ tick, midiPitch })));
+    assert.deepEqual([scoreOnly, midiOnly], [[], []]);
+    assert.deepEqual(toPerformance(score), {
+      notes: spans.map(([start, end, midiPitch]) => ({ voice: "1", midiPitch, startSeconds: start / 2, endSeconds: end / 2 })),
+      durationSeconds: 3,
+    });
+    assert.deepEqual(score, written);
+  });
+}
 
 test("the Fugue sustains a four-measure bass tie and keeps coincident voices distinct", () => {
   const movement = movements.find(({ id }) => id === "bwv846-fugue");

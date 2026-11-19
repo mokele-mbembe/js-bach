@@ -12,7 +12,7 @@ npm run demo
 
 Open the local player, choose any of the 24 works in The Well-Tempered Clavier, Book I (BWV 846–869), and select Prelude or Fugue. The BWV 846 and 847 fugues also offer solos that start at the selected voice’s first entry and preserve its later rests. Changing the work, movement, or voice stops the current playback. [Local player](http://127.0.0.1:4173/)
 
-The player follows simple written repeats, joins tied notes across measures, and schedules triangle oscillators with Web Audio. It takes the tempo from the selected score and plays the main written notes at ornaments. The Score IR preserves grace notes as zero-duration events, which the demo skips during playback. [Performance conversion](src/performance.ts) · [Web Audio scheduler](src/oscillator-player.ts)
+The player follows simple written repeats, joins tied notes across measures, and schedules triangle oscillators with Web Audio. At a repeat jump, a tie continues when the next performed measure supplies its matching continuation. A tie stop whose start was skipped sounds as a new note. Playback uses the selected score's tempo and plays the main written notes at ornaments. The Score IR preserves grace notes as zero-duration events, which the demo skips during playback. [Performance conversion](src/performance.ts) · [Web Audio scheduler](src/oscillator-player.ts)
 
 The player expands the smaller encoded representation of each movement before playback. The measure map marks rhythm template references. The fragment list shows each selected fragment’s voice, measure range, and transposition in semitones. Every movement displays the ordinary event stream and both encoded Brotli sizes.
 
@@ -38,7 +38,7 @@ The command accepts new candidate JSON files anywhere on disk. Give each file a 
 
 When movements share a file, give each its own `score.measureRange` or `referenceMidi.tickRange`. Use half-open `[start, end]` bounds with zero-based MusicXML measure indices and native MIDI ticks. An optional `source` URL provides the upstream page for review. An optional SHA-256 pins the expected bytes.
 
-The audit downloads the files into `dist/source-audit/bwv*/` and writes `attack-diff.md` and `attack-diff.json` with the calculated SHA-256 values, exact attack differences, and possible notation matches. It verifies the PDMX v9 release files against their published sizes and MD5 checksums before caching them under `dist/source-audit/cache/`. The first audit using PDMX MusicXML also downloads the 1.9 GB MusicXML archive. Confirm the edition, redistribution terms, and explanations for differences before creating the final corpus manifest. [PDMX v9 release](https://zenodo.org/records/15571083)
+The audit downloads the files into `dist/source-audit/bwv*/` and writes `attack-diff.md` and `attack-diff.json` with the calculated SHA-256 values, exact attack differences, possible notation matches, and separate license evidence for the MusicXML and MIDI. Use filenames that are unique even when compared without regard to case. In a batch, the command writes reports for successful candidates and exits with an error if any candidate failed. It verifies the PDMX v9 release files against their published sizes and MD5 checksums before caching them under `dist/source-audit/cache/`. The first audit using PDMX MusicXML also downloads the 1.9 GB MusicXML archive. Confirm the edition, redistribution terms, and explanations for differences before creating the final corpus manifest. [PDMX v9 release](https://zenodo.org/records/15571083)
 
 ### Verify and build
 
