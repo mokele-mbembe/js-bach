@@ -1,17 +1,26 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname } from "node:path";
 import { works } from "./corpus.js";
 
+const catalog = new URL("../corpus/catalog.json", import.meta.url);
+try {
+  await access(catalog);
+} catch (error) {
+  if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  console.error("Build the corpus first with npm run build:corpus, or start with npm run demo.");
+  process.exit(1);
+}
+
 const assets = new Map<string, URL>([
   ["/", new URL("../../demo/index.html", import.meta.url)],
   ["/demo.css", new URL("../../demo/demo.css", import.meta.url)],
+  ["/corpus/catalog.json", catalog],
 ]);
 
 for (const path of [
   "/demo/main.js", "/src/oscillator-player.js", "/src/performance.js", "/src/rhythm-templates.js", "/src/score-ir.js",
   "/src/transposed-fragments.js",
-  "/corpus/catalog.json",
 ]) {
   assets.set(path, new URL(`..${path}`, import.meta.url));
 }

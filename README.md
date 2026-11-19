@@ -18,13 +18,18 @@ The player expands the smaller encoded representation of each movement before pl
 
 ## Import the corpus
 
-With Node.js 22 or later and npm installed, run these commands from the repository root.
+With Node.js 22 or later installed, run `npm ci` from the repository root. To add a work, create `corpus/bwv<NUMBER>/` with the original `.mxl` files, reference MIDI, and `sources.json`. The scripts discover works by directory and check that the manifest identifies both movements. Use an existing [split-score manifest](corpus/bwv861/sources.json) or [combined-score manifest](corpus/bwv862/sources.json) as a guide. Review the edition, redistribution terms, and expected MIDI differences before adding a source.
+
+Check just the works you are reviewing, then regenerate the complete comparison and demo data.
 
 ```sh
-npm ci
-npm test
+npm run check:corpus -- 862 863
 npm run build:corpus
 ```
+
+Omit the BWV numbers to check every work's attack baseline. The build reuses each unchanged movement's transposition search and still checks both round-trips and recalculates the Brotli sizes. Use `npm run build:corpus -- --fresh` to rerun every search. For demo changes using already generated scores, `npm run demo:serve` recompiles the TypeScript and starts the player.
+
+`npm run verify` runs all tests and a fresh corpus build. GitHub Actions runs it on pushes and pull requests and attaches the comparison table to the job.
 
 The build writes one Score IR JSON file per movement and copies each source manifest to its work directory under `dist/corpus/`. The importer accepts the pitched, single-part MusicXML 3.1 and 4.0 subsets used by the corpus. For works published in a single MusicXML archive, the manifest gives the measure ranges for the two movements. The output uses integer ticks, with a quarter-note division for the score, a start tick for each measure, and a measure-relative offset for each note or rest. Notes retain their written pitch, voice, staff, ties, and notation marks. Tempo comes from the imported edition when specified. [MVP plan](docs/mvp.md)
 

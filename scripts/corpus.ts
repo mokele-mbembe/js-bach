@@ -1,5 +1,6 @@
+import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { importMxl } from "../src/import-mxl.js";
 import type { Attack, ScoreIR } from "../src/score-ir.js";
 
@@ -47,9 +48,21 @@ export interface WorkSource {
 }
 
 const corpusDirectory = new URL("../../corpus/", import.meta.url);
-export const works = ["846", "847", "848", "849", "850", "851", "852", "853", "854", "855", "856", "857", "858", "859", "860", "861", "862", "863"].map((bwv) => {
+const workNumbers = readdirSync(corpusDirectory, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && /^bwv[1-9]\d*$/.test(entry.name))
+  .map((entry) => entry.name.slice(3))
+  .sort((a, b) => Number(a) - Number(b));
+assert.ok(workNumbers.length > 0, "No BWV directories found in corpus/");
+
+export const works = workNumbers.map((bwv) => {
   const manifestFile = new URL(`bwv${bwv}/sources.json`, corpusDirectory);
   const work = JSON.parse(readFileSync(manifestFile, "utf8")) as WorkSource;
+  assert.equal(work.bwv, bwv, `BWV number in ${manifestFile.pathname} must match its directory`);
+  assert.deepEqual(
+    work.movements.map(({ kind, id }) => `${kind}:${id}`).sort(),
+    [`fugue:bwv${bwv}-fugue`, `prelude:bwv${bwv}-prelude`],
+    `BWV ${bwv} must contain its prelude and fugue with their canonical IDs`,
+  );
   return { ...work, manifestFile };
 });
 

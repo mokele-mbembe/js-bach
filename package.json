@@ -10,8 +10,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "build:corpus": "npm run build && node dist/scripts/build-corpus.js",
+    "check:corpus": "npm run build && node dist/scripts/check-corpus.js",
     "test": "npm run build && node --test \"dist/test/*.test.js\"",
-    "demo": "npm run build:corpus && node dist/scripts/serve-demo.js"
+    "verify": "npm run build && node --test \"dist/test/*.test.js\" && node dist/scripts/build-corpus.js --fresh",
+    "demo": "npm run build:corpus && node dist/scripts/serve-demo.js",
+    "demo:serve": "npm run build && node dist/scripts/serve-demo.js"
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.9.12",
