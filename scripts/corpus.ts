@@ -56,14 +56,15 @@ assert.ok(workNumbers.length > 0, "No BWV directories found in corpus/");
 
 export const works = workNumbers.map((bwv) => {
   const manifestFile = new URL(`bwv${bwv}/sources.json`, corpusDirectory);
-  const work = JSON.parse(readFileSync(manifestFile, "utf8")) as WorkSource;
+  const manifest = readFileSync(manifestFile);
+  const work = JSON.parse(manifest.toString("utf8")) as WorkSource;
   assert.equal(work.bwv, bwv, `BWV number in ${manifestFile.pathname} must match its directory`);
   assert.deepEqual(
     work.movements.map(({ kind, id }) => `${kind}:${id}`).sort(),
     [`fugue:bwv${bwv}-fugue`, `prelude:bwv${bwv}-prelude`],
     `BWV ${bwv} must contain its prelude and fugue with their canonical IDs`,
   );
-  return { ...work, manifestFile };
+  return { ...work, manifestFile, manifest };
 });
 
 export const movements = works.flatMap(({ bwv, composer, manifestFile, movements }) => movements.map((movement) => ({

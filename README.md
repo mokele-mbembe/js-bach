@@ -27,11 +27,11 @@ npm run check:corpus -- 862 863
 npm run build:corpus
 ```
 
-Omit the BWV numbers to check every work's attack baseline. The build reuses each unchanged movement's transposition search and still checks both round-trips and recalculates the Brotli sizes. Use `npm run build:corpus -- --fresh` to rerun every search. For demo changes using already generated scores, `npm run demo:serve` recompiles the TypeScript and starts the player.
+Omit the BWV numbers to check every work's attack baseline. The build reuses each unchanged movement's transposition search and still checks both round-trips and recalculates the Brotli sizes. Use `npm run build:corpus -- --fresh` to rerun every search. For demo changes using already generated scores, `npm run demo:serve` recompiles the TypeScript and starts the player with the most recently published catalog. Restart the demo after publishing new scores.
 
 `npm run verify` runs all tests and a fresh corpus build. GitHub Actions runs it on pushes and pull requests and attaches the comparison table to the job.
 
-The build writes one Score IR JSON file per movement and copies each source manifest to its work directory under `dist/corpus/`. The importer accepts the pitched, single-part MusicXML 3.1 and 4.0 subsets used by the corpus. For works published in a single MusicXML archive, the manifest gives the measure ranges for the two movements. The output uses integer ticks, with a quarter-note division for the score, a start tick for each measure, and a measure-relative offset for each note or rest. Notes retain their written pitch, voice, staff, ties, and notation marks. Tempo comes from the imported edition when specified. [MVP plan](docs/mvp.md)
+The build writes the Score IR, source manifests, encodings, catalog, and report to a new directory under `dist/corpus/builds/`. It atomically updates `dist/corpus/current` to the directory name once every file is ready. Older directories remain available to running demos. The importer accepts the pitched, single-part MusicXML 3.1 and 4.0 subsets used by the corpus. For works published in a single MusicXML archive, the manifest gives the measure ranges for the two movements. The output uses integer ticks, with a quarter-note division for the score, a start tick for each measure, and a measure-relative offset for each note or rest. Notes retain their written pitch, voice, staff, ties, and notation marks. Tempo comes from the imported edition when specified. [MVP plan](docs/mvp.md)
 
 The tests check the original file hashes and compare distinct metered `(start tick, MIDI pitch)` pairs against the upstream reference MIDI. The manifests record expected differences from overlapping notes, realized ornaments, an arpeggiated chord, and a reattack at a written tie. The BWV 852 prelude also pins the 15 attacks omitted from the PDMX MIDI and verified against the printed OpenWTC edition in measures 63–64. [Importer tests](test/import-mxl.test.ts) · [OpenWTC printed edition](https://upload.wikimedia.org/wikipedia/commons/d/d8/J.S._Bach_-_The_Well-Tempered_Clavier%2C_Book_1_-_OpenWTC.pdf#page=58)
 
@@ -39,7 +39,7 @@ The tests check the original file hashes and compare distinct metered `(start ti
 
 `npm run build:corpus` writes the template-encoded `.rhythm.json` files alongside the original Score IR. The build expands each encoded file and checks every Score IR field before writing the results. A template shares timing, rests, voices, ties, and notation marks only when those fields match. Each reference stores its own written pitches in event order. [Rhythm codec](src/rhythm-templates.ts) · [Round-trip tests](test/rhythm-templates.test.ts)
 
-The build prints the Brotli sizes, writes a `compression.json` file per work, and generates a single table for all 36 movements in `dist/corpus/compression.md`. It compares compact UTF-8 JSON for the event stream and each encoding, with Brotli text mode and quality 11.
+The build prints the Brotli sizes and the path to the published `compression.md` table for all 36 movements. It writes a `compression.json` file per work and compares compact UTF-8 JSON for the event stream and each encoding, with Brotli text mode and quality 11.
 
 ## Compare transposed fragments
 

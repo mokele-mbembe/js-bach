@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
-import { createHash, randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { brotliCompressSync, constants } from "node:zlib";
 import { encodeRhythmTemplates, expandRhythmTemplates } from "../src/rhythm-templates.js";
 import { encodeTransposedFragments, expandTransposedFragments } from "../src/transposed-fragments.js";
+import { currentCorpus, publishCorpus } from "./corpus-output.js";
 import { movements, readMovementScore, works } from "./corpus.js";
 
 const brotli = {
@@ -38,16 +40,6 @@ function readCachedTransposition(directory: URL, id: string, key: string): strin
   }
 }
 
-function writeOutput(file: URL, data: string | Uint8Array): void {
-  const temporary = new URL(`.${randomUUID()}.tmp`, file);
-  try {
-    writeFileSync(temporary, data, { flag: "wx" });
-    renameSync(temporary, file);
-  } finally {
-    rmSync(temporary, { force: true });
-  }
-}
-
 function brotliBytes(json: string): number {
   return brotliCompressSync(Buffer.from(json, "utf8"), {
     params: {
@@ -61,7 +53,7 @@ function sizes(json: string) {
   return { jsonBytes: Buffer.byteLength(json, "utf8"), brotliBytes: brotliBytes(json) };
 }
 
-const target = new URL("../corpus/", import.meta.url);
+const previous = fresh ? undefined : currentCorpus();
 const scores = movements.map((movement) => {
   const { id, bwv, title, score: input } = movement;
   const score = readMovementScore(movement);
@@ -79,9 +71,8 @@ const scores = movements.map((movement) => {
   const rhythmJson = JSON.stringify(encodeRhythmTemplates(original));
   assert.deepEqual(expandRhythmTemplates(JSON.parse(rhythmJson)), eventData, `${id} changed during rhythm expansion`);
 
-  const directory = new URL(`bwv${bwv}/`, target);
   const cacheKey = sha256(encoderFingerprint + eventJson);
-  const cached = fresh ? undefined : readCachedTransposition(directory, id, cacheKey);
+  const cached = previous && readCachedTransposition(new URL(`bwv${bwv}/`, previous), id, cacheKey);
   const transposedJson = cached ?? JSON.stringify(encodeTransposedFragments(original, brotliBytes));
   assert.deepEqual(expandTransposedFragments(JSON.parse(transposedJson)), eventData, `${id} changed during fragment expansion`);
   const comparison = {
@@ -92,24 +83,6 @@ const scores = movements.map((movement) => {
   console.log(`${id} — ${original.measures.length} measures verified, Brotli event stream ${comparison.eventStream.brotliBytes} B, rhythm ${comparison.rhythmEncoding.brotliBytes} B, transposition ${comparison.transposedEncoding.brotliBytes} B${cached === undefined ? "" : " (cached search)"}`);
   return { id, bwv, title, original, rhythmJson, transposedJson, cacheKey, sizes: comparison };
 });
-
-for (const { bwv, manifestFile } of works) {
-  const directory = new URL(`bwv${bwv}/`, target);
-  mkdirSync(directory, { recursive: true });
-  writeOutput(new URL("sources.json", directory), readFileSync(manifestFile));
-  const workScores = scores.filter((score) => score.bwv === bwv);
-  for (const { id, original, rhythmJson, transposedJson, cacheKey } of workScores) {
-    writeOutput(new URL(`${id}.json`, directory), `${JSON.stringify(original, null, 2)}\n`);
-    writeOutput(new URL(`${id}.rhythm.json`, directory), rhythmJson);
-    writeOutput(new URL(`${id}.transposed.json`, directory), transposedJson);
-    writeOutput(new URL(`.${id}.transposed.cache`, directory), `${cacheKey} ${sha256(transposedJson)}\n`);
-  }
-  writeOutput(new URL("compression.json", directory), `${JSON.stringify({
-    brotli,
-    movements: Object.fromEntries(workScores.map(({ id, sizes }) => [id, sizes])),
-  }, null, 2)}\n`);
-}
-writeOutput(new URL("catalog.json", target), `${JSON.stringify({ works: works.map(({ bwv, key }) => ({ bwv, key })) })}\n`);
 
 const comparisonTable = [
   "# Corpus compression comparison",
@@ -123,4 +96,25 @@ const comparisonTable = [
   ),
   "",
 ].join("\n");
-writeOutput(new URL("compression.md", target), comparisonTable);
+
+const published = publishCorpus((target) => {
+  for (const { bwv, manifest } of works) {
+    const directory = new URL(`bwv${bwv}/`, target);
+    mkdirSync(directory);
+    writeFileSync(new URL("sources.json", directory), manifest);
+    const workScores = scores.filter((score) => score.bwv === bwv);
+    for (const { id, original, rhythmJson, transposedJson, cacheKey } of workScores) {
+      writeFileSync(new URL(`${id}.json`, directory), `${JSON.stringify(original, null, 2)}\n`);
+      writeFileSync(new URL(`${id}.rhythm.json`, directory), rhythmJson);
+      writeFileSync(new URL(`${id}.transposed.json`, directory), transposedJson);
+      writeFileSync(new URL(`.${id}.transposed.cache`, directory), `${cacheKey} ${sha256(transposedJson)}\n`);
+    }
+    writeFileSync(new URL("compression.json", directory), `${JSON.stringify({
+      brotli,
+      movements: Object.fromEntries(workScores.map(({ id, sizes }) => [id, sizes])),
+    }, null, 2)}\n`);
+  }
+  writeFileSync(new URL("catalog.json", target), `${JSON.stringify({ works: works.map(({ bwv, key }) => ({ bwv, key })) })}\n`);
+  writeFileSync(new URL("compression.md", target), comparisonTable);
+});
+console.log(`Published Brotli report at ${fileURLToPath(new URL("compression.md", published))}`);

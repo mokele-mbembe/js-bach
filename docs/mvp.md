@@ -31,7 +31,7 @@
 
 BWV 847 的两个乐章已加入语料。前奏曲第 34 小节的短 C4 与另一个长 C4 重叠，MusicXML 与 LilyPond 原谱都保留了短音，参考 MIDI 只触发长音。赋格采用 CC BY-SA 4.0，生成的谱数据保留署名和许可。四个乐章用同一组 Brotli 参数独立比较两种复用，demo 可在两套作品间切换。 [BWV 847 来源清单](../corpus/bwv847/sources.json)
 
-BWV 848 和 849 的四个乐章沿用 Noctave MusicXML 和同源 Mutopia MIDI。这两组谱的底本是 1866 年 Breitkopf & Härtel 版，排谱者为 Davide Castellone，数字文件均标为公有领域。起音校验检查 MIDI 中的同音持续区间，并核对清单记录的倚音起音和延音重触发。BWV 848 赋格第 51–52 小节的跨声部编号延音在试听中合为一次发声。两种编码每次构建都会逐字段还原全部八个乐章，汇总输出在 `dist/corpus/compression.md`。 [BWV 848 来源清单](../corpus/bwv848/sources.json) · [BWV 849 来源清单](../corpus/bwv849/sources.json) · [复验命令](../README.md#compare-rhythm-encoding)
+BWV 848 和 849 的四个乐章沿用 Noctave MusicXML 和同源 Mutopia MIDI。这两组谱的底本是 1866 年 Breitkopf & Härtel 版，排谱者为 Davide Castellone，数字文件均标为公有领域。起音校验检查 MIDI 中的同音持续区间，并核对清单记录的倚音起音和延音重触发。BWV 848 赋格第 51–52 小节的跨声部编号延音在试听中合为一次发声。两种编码每次构建都会逐字段还原全部八个乐章，构建日志给出发布目录下的 `compression.md` 路径。 [BWV 848 来源清单](../corpus/bwv848/sources.json) · [BWV 849 来源清单](../corpus/bwv849/sources.json) · [复验命令](../README.md#compare-rhythm-encoding)
 
 BWV 850 和 851 的四个乐章沿用同源 MusicXML 与 MIDI。BWV 850 赋格沿用 Sven Reichard 排谱版的 CC BY-SA 4.0，署名和许可随生成的谱数据分发。BWV 851 赋格第 43 小节的短 D3 与正在持续的 D3 重叠，上游 MIDI 只触发一次。构建汇总表与 demo 现覆盖 BWV 846–851 的十二个乐章。 [BWV 850 来源清单](../corpus/bwv850/sources.json) · [BWV 851 来源清单](../corpus/bwv851/sources.json)
 
