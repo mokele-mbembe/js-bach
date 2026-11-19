@@ -1,0 +1,94 @@
+{
+  "bwv": "869",
+  "key": "B minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv869-prelude",
+      "kind": "prelude",
+      "title": "Prelude in B minor",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-24-in-b-minor-bwv-869/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/24.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "4968229e66bf2f930c0d3368aaf00e24558f2bf6e1953a644f2cfaa70aa99d1a",
+        "measureRange": [
+          0,
+          47
+        ],
+        "editionNotes": "The written repeats cover measures 1\u201317 and 18\u201347. Both passes are included in the MIDI attack baseline. The 34 extra MIDI attacks realize the written trill in measure 16 and inverted mordent in measure 17 on each pass."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 540981",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/8/48/QmQvXob22G4dEqDYQ3qjkrHVDJdZHnk7tQeSR16HJcFFEp.mid",
+        "pdmxMetadata": "metadata/0/540981.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "a29338dc86198ea05778c6579ff01bd673f97f265c395437cfaf11b9f1e3b2c7",
+        "tickRange": [
+          0,
+          180480
+        ]
+      },
+      "expected": {
+        "measures": 47,
+        "attacks": 1440,
+        "realizedOrnamentAttacks": 34
+      }
+    },
+    {
+      "id": "bwv869-fugue",
+      "kind": "fugue",
+      "title": "Fugue in B minor",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-24-in-b-minor-bwv-869/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/24.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "4968229e66bf2f930c0d3368aaf00e24558f2bf6e1953a644f2cfaa70aa99d1a",
+        "measureRange": [
+          47,
+          123
+        ],
+        "editionNotes": "All 31 extra MIDI attacks realize the written trill in measure 3."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 540981",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/8/48/QmQvXob22G4dEqDYQ3qjkrHVDJdZHnk7tQeSR16HJcFFEp.mid",
+        "pdmxMetadata": "metadata/0/540981.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "a29338dc86198ea05778c6579ff01bd673f97f265c395437cfaf11b9f1e3b2c7",
+        "tickRange": [
+          180480,
+          326400
+        ]
+      },
+      "expected": {
+        "measures": 76,
+        "attacks": 1790,
+        "realizedOrnamentAttacks": 31
+      }
+    }
+  ]
+}

@@ -21,6 +21,8 @@ const assets = new Map<string, URL>([
 for (const path of [
   "/demo/main.js", "/src/oscillator-player.js", "/src/performance.js", "/src/rhythm-templates.js", "/src/score-ir.js",
   "/src/transposed-fragments.js",
+  "/src/score-repeats.js",
+  "/src/score-ties.js",
 ]) {
   assets.set(path, new URL(`..${path}`, import.meta.url));
 }

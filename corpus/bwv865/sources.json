@@ -1,0 +1,64 @@
+{
+  "bwv": "865",
+  "key": "A minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv865-prelude",
+      "kind": "prelude",
+      "title": "Prelude in A minor",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-praeludium-xx-bwv-865/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-praeludium-xx-bwv-865/bach-das-wohltemperierte-clavier-i-praeludium-xx-bwv-865.mxl",
+        "license": "Public Domain",
+        "sha256": "9bf14a63a10d8a2151004bc3ab18de599071e424a1022062e1dfc3b4d92cd7b6"
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2015/09/01-670",
+        "typesetter": "Stelios Samelis",
+        "sourceEdition": "Bach-Gesellschaft edition (1866)",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=670",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV865/BWV865_Praeludium20/BWV865_Praeludium20.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV865/BWV865_Praeludium20/BWV865_Praeludium20.ly",
+        "license": "Public Domain",
+        "sha256": "8d6055aadb2d75371ee71494c5267bb31810ac4c3296bdb942d0c179d96b46d4"
+      },
+      "expected": {
+        "measures": 28,
+        "attacks": 608
+      }
+    },
+    {
+      "id": "bwv865-fugue",
+      "kind": "fugue",
+      "title": "Fugue in A minor",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-i-fuga-xx-bwv-865/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-i-fuga-xx-bwv-865/bach-das-wohltemperierte-clavier-i-fuga-xx-bwv-865.mxl",
+        "license": "Public Domain",
+        "sha256": "ddc47b6a32a999f48b91fb5f2d151146c83a192351b94c130a17f8129a22879a"
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "Mutopia-2015/08/21-807",
+        "typesetter": "Stelios Samelis",
+        "sourceEdition": "Bach-Gesellschaft edition (1866)",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=807",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV865/BWV865_Fuga20/BWV865_Fuga20.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV865/BWV865_Fuga20/BWV865_Fuga20.ly",
+        "license": "Public Domain",
+        "sha256": "d7d3f5d0056a8d7df7d907871e35d369782ec9129439bc2a6811e29cdf2786ee"
+      },
+      "expected": {
+        "measures": 87,
+        "attacks": 2372
+      }
+    }
+  ]
+}

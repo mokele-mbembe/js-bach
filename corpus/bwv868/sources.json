@@ -1,0 +1,103 @@
+{
+  "bwv": "868",
+  "key": "B major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv868-prelude",
+      "kind": "prelude",
+      "title": "Prelude in B major",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "PDMX",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mxl.tar.gz?download=1",
+        "archiveMember": "mxl/9/38/QmRq2aNVLYxRFVdTLNGakL7T1GFfrsjthe9XMiQQgVeYsu.mxl",
+        "pdmxMetadata": "metadata/1/540986.json",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "1b048aea3a780d89342aebf46a7b4b98c1cd857d854588a793422085da021646",
+        "measureRange": [
+          0,
+          19
+        ],
+        "editionNotes": "The original combined MusicXML numbers the prelude as measures 1–19. Its metered attacks match the same-edition PDMX MIDI exactly."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 540986",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/9/38/QmRq2aNVLYxRFVdTLNGakL7T1GFfrsjthe9XMiQQgVeYsu.mid",
+        "pdmxMetadata": "metadata/1/540986.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "abedc75194ff326da5fa7be58291e19acc5459025ad5827febe17f32a2d72916",
+        "tickRange": [
+          0,
+          36480
+        ]
+      },
+      "expected": {
+        "measures": 19,
+        "attacks": 416
+      }
+    },
+    {
+      "id": "bwv868-fugue",
+      "kind": "fugue",
+      "title": "Fugue in B major",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "PDMX",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mxl.tar.gz?download=1",
+        "archiveMember": "mxl/9/38/QmRq2aNVLYxRFVdTLNGakL7T1GFfrsjthe9XMiQQgVeYsu.mxl",
+        "pdmxMetadata": "metadata/1/540986.json",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "1b048aea3a780d89342aebf46a7b4b98c1cd857d854588a793422085da021646",
+        "measureRange": [
+          19,
+          53
+        ],
+        "editionNotes": "The fugue retains the original combined numbering, measures 20–53. The 19 extra MIDI attacks realize the trill in measure 21 and the inverted mordent in measure 42. In measure 42 the MIDI begins the ornament on D-sharp 3, replacing the written on-beat C-sharp 3 attack."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 540986",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/9/38/QmRq2aNVLYxRFVdTLNGakL7T1GFfrsjthe9XMiQQgVeYsu.mid",
+        "pdmxMetadata": "metadata/1/540986.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "abedc75194ff326da5fa7be58291e19acc5459025ad5827febe17f32a2d72916",
+        "tickRange": [
+          36480,
+          101760
+        ]
+      },
+      "expected": {
+        "measures": 34,
+        "attacks": 822,
+        "unplayedScoreAttacks": [
+          {
+            "tick": 352,
+            "midiPitch": 49
+          }
+        ],
+        "realizedOrnamentAttacks": 19
+      }
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "bwv": "866",
+  "key": "B-flat major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book I",
+  "movements": [
+    {
+      "id": "bwv866-prelude",
+      "kind": "prelude",
+      "title": "Prelude in B-flat major",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-21-in-b-flat-major-bwv-866/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/21.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "d612799f35e09dbb120ce3143275d49eb072ec397a56f9229a6e15f125165ff1",
+        "measureRange": [
+          0,
+          20
+        ],
+        "editionNotes": "The two extra MIDI attacks in measure 19 realize the written mordent on E-flat 4 with D4 as the lower neighbor."
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 540996",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/0/2/Qma3fiTDjUcuzLQES3Rj2FxH8DNrMcP55rfkr9NASgke1p.mid",
+        "pdmxMetadata": "metadata/3/540996.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "039586dfa84fee6e478c2a39b6e8060380f9b1446f7de7faed653a159782ea66",
+        "tickRange": [
+          0,
+          38400
+        ]
+      },
+      "expected": {
+        "measures": 20,
+        "attacks": 632,
+        "realizedOrnamentAttacks": 2
+      }
+    },
+    {
+      "id": "bwv866-fugue",
+      "kind": "fugue",
+      "title": "Fugue in B-flat major",
+      "score": {
+        "file": "prelude-and-fugue.mxl",
+        "edition": "Artform",
+        "source": "https://jamescarterpiano.com/sheet-music/js-bach/prelude-and-fugue-no-21-in-b-flat-major-bwv-866/",
+        "download": "https://jamescarterpiano.com/notation/scores/openwtc/21.mxl",
+        "upstream": "https://commons.wikimedia.org/wiki/File:J.S._Bach_-_The_Well-Tempered_Clavier,_Book_1_-_OpenWTC.pdf",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Olivier Miquel / Open Well-Tempered Clavier",
+        "sha256": "d612799f35e09dbb120ce3143275d49eb072ec397a56f9229a6e15f125165ff1",
+        "measureRange": [
+          20,
+          68
+        ]
+      },
+      "referenceMidi": {
+        "file": "prelude-and-fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 540996",
+        "typesetter": "Olivier Miquel",
+        "sourceEdition": "Open Well-Tempered Clavier",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/0/2/Qma3fiTDjUcuzLQES3Rj2FxH8DNrMcP55rfkr9NASgke1p.mid",
+        "pdmxMetadata": "metadata/3/540996.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "039586dfa84fee6e478c2a39b6e8060380f9b1446f7de7faed653a159782ea66",
+        "tickRange": [
+          38400,
+          107520
+        ]
+      },
+      "expected": {
+        "measures": 48,
+        "attacks": 946
+      }
+    }
+  ]
+}
