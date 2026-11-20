@@ -1,0 +1,66 @@
+{
+  "bwv": "871",
+  "key": "C minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book II",
+  "movements": [
+    {
+      "id": "bwv871-prelude",
+      "kind": "prelude",
+      "title": "Prelude in C minor",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-ii-praeludium-bwv-871/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-ii-praeludium-bwv-871/bach-das-wohltemperierte-clavier-ii-praeludium-bwv-871.mxl",
+        "license": "Public Domain",
+        "sha256": "4f732fbdeec5b3065edbd3733a68145725049247d05bf9889dbd78252e37f0e9",
+        "editionNotes": "The published MIDI plays each of measures 1–28 once. The LilyPond and MusicXML scores mark repeats over measures 1–12 and 13–28, which playback expands to 56 measures."
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2013/01/08-316",
+        "typesetter": "Jesse Mehrbach",
+        "sourceEdition": "Bach-Gesellschaft",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=316",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV871/wtk2-prelude2/wtk2-prelude2.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV871/wtk2-prelude2/wtk2-prelude2.ly",
+        "license": "Public Domain",
+        "repeatMode": "written",
+        "sha256": "3d7ef4788b5400f25bf7c3f565e29ef8d87ca474a4dbeb9d6aa25ace5dd97083"
+      },
+      "expected": {
+        "measures": 28,
+        "attacks": 692
+      }
+    },
+    {
+      "id": "bwv871-fugue",
+      "kind": "fugue",
+      "title": "Fugue in C minor",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-ii-fuga-bwv-871/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-ii-fuga-bwv-871/bach-das-wohltemperierte-clavier-ii-fuga-bwv-871.mxl",
+        "license": "Public Domain",
+        "sha256": "20ee4f899e23e05025629fb49a96043c16b9e17ef2f2912a5de4c91c27172a53"
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "Mutopia-2013/01/08-9",
+        "typesetter": "Felix Braun",
+        "sourceEdition": "Unknown",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=9",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV871/wtk2-fugue2/wtk2-fugue2.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV871/wtk2-fugue2/wtk2-fugue2.ly",
+        "license": "Public Domain",
+        "sha256": "3ef4323dfd1743224ffdb368842bdb2f8ddf5395e34ce268829abbe1953ab0dd"
+      },
+      "expected": {
+        "measures": 28,
+        "attacks": 647
+      }
+    }
+  ]
+}

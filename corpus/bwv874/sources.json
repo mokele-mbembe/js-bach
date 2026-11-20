@@ -1,0 +1,96 @@
+{
+  "bwv": "874",
+  "key": "D major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book II",
+  "movements": [
+    {
+      "kind": "prelude",
+      "title": "Prelude in D major",
+      "score": {
+        "file": "combined.mxl",
+        "edition": "PDMX",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mxl.tar.gz?download=1",
+        "archiveMember": "mxl/10/6/QmS72XFpsTbw9gCzzoieMQT6Ey5s99LT35g4yJhm3BQc7h.mxl",
+        "pdmxMetadata": "metadata/2/1193551.json",
+        "upstream": "https://musescore.com/user/13172/scores/1193551",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "verits99 / MuseScore",
+        "sha256": "8b5d03435f6b6c1c4964788a64e5d68b9e95e3e1f4ba94d5e4e32aff5847b9bf",
+        "editionNotes": "The harpsichord edition retains the written G3 at measure 108, confirmed by its MIDI and Keith Snortum’s keyboard edition. The prelude ends at measure 112.",
+        "measureRange": [
+          0,
+          112
+        ]
+      },
+      "referenceMidi": {
+        "file": "combined.reference.mid",
+        "edition": "PDMX v9, MuseScore 1193551",
+        "typesetter": "verits99",
+        "sourceEdition": "The Well-Tempered Clavier Book II, V (A = 415 Hz), harpsichord sound",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/10/6/QmS72XFpsTbw9gCzzoieMQT6Ey5s99LT35g4yJhm3BQc7h.mid",
+        "pdmxMetadata": "metadata/2/1193551.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "f261491af9155c20c0f961f11cad24d77aca460ed4a3dba1ce8d6ef9bce08645",
+        "tickRange": [
+          0,
+          215040
+        ]
+      },
+      "id": "bwv874-prelude",
+      "expected": {
+        "measures": 112,
+        "attacks": 3131
+      }
+    },
+    {
+      "kind": "fugue",
+      "title": "Fugue in D major",
+      "score": {
+        "file": "combined.mxl",
+        "edition": "PDMX",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mxl.tar.gz?download=1",
+        "archiveMember": "mxl/10/6/QmS72XFpsTbw9gCzzoieMQT6Ey5s99LT35g4yJhm3BQc7h.mxl",
+        "pdmxMetadata": "metadata/2/1193551.json",
+        "upstream": "https://musescore.com/user/13172/scores/1193551",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "verits99 / MuseScore",
+        "sha256": "8b5d03435f6b6c1c4964788a64e5d68b9e95e3e1f4ba94d5e4e32aff5847b9bf",
+        "editionNotes": "The source numbers the fugue as measures 114–163. Measure 113 is a full-bar rest between movements in the original score and MIDI.",
+        "measureRange": [
+          113,
+          163
+        ]
+      },
+      "referenceMidi": {
+        "file": "combined.reference.mid",
+        "edition": "PDMX v9, MuseScore 1193551",
+        "typesetter": "verits99",
+        "sourceEdition": "The Well-Tempered Clavier Book II, V (A = 415 Hz), harpsichord sound",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/10/6/QmS72XFpsTbw9gCzzoieMQT6Ey5s99LT35g4yJhm3BQc7h.mid",
+        "pdmxMetadata": "metadata/2/1193551.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "f261491af9155c20c0f961f11cad24d77aca460ed4a3dba1ce8d6ef9bce08645",
+        "tickRange": [
+          216960,
+          312960
+        ]
+      },
+      "id": "bwv874-fugue",
+      "expected": {
+        "measures": 50,
+        "attacks": 861
+      }
+    }
+  ]
+}

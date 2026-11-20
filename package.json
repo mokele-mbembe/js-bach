@@ -1,9 +1,14 @@
 {
   "name": "js-bach",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "description": "Local browser player for J.S. Bach’s Well-Tempered Clavier",
   "private": true,
   "type": "module",
   "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mokele-mbembe/js-bach.git"
+  },
   "engines": {
     "node": ">=22"
   },
@@ -15,7 +20,9 @@
     "test": "npm run build && node --test \"dist/test/*.test.js\"",
     "verify": "npm run build && node --test \"dist/test/*.test.js\" && node dist/scripts/build-corpus.js --fresh",
     "demo": "npm run build:corpus && node dist/scripts/serve-demo.js",
-    "demo:serve": "npm run build && node dist/scripts/serve-demo.js"
+    "demo:serve": "npm run build && node dist/scripts/serve-demo.js",
+    "pack:preview": "npm run build:corpus && npm run pack:preview:built",
+    "pack:preview:built": "node dist/scripts/pack-preview.js"
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.9.12",

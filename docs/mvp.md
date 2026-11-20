@@ -23,7 +23,7 @@
 
 导入里程碑已完成。原始 `.mxl`、参考 MIDI 和来源记录位于 `corpus/bwv846/`，两乐章的起音基准可在本地离线复验。 [来源清单](../corpus/bwv846/sources.json) · [运行命令](../README.md#import-the-corpus)
 
-播放器里程碑已完成。浏览器 demo 从导入后的 Score IR 播放两乐章，赋格的独奏试听从所选声部第一次进入开始。 [运行命令](../README.md#play-bwv-846869) · [演奏事件测试](../test/performance.test.ts)
+播放器里程碑已完成。浏览器 demo 从导入后的 Score IR 播放两乐章，赋格的独奏试听从所选声部第一次进入开始。 [运行命令](../README.md#play-bwv-846875) · [演奏事件测试](../test/performance.test.ts)
 
 节奏模板里程碑已完成。前奏曲第 1–32 小节复用同一个模板，第 33–34 小节复用另一个模板，第 35 小节保留原事件。赋格的整小节节奏编码保留原事件。构建前校验两乐章的展开结果，demo 标出复用位置并显示两种编码的 Brotli 大小。 [复验命令](../README.md#compare-rhythm-encoding)
 
@@ -52,3 +52,9 @@ BWV 864 采用 Artform 的 OpenWTC CC0 合卷和 PDMX 同版 MIDI。所有谱面
 BWV 866 与 867 用 `audit:sources` 审核 Artform 原始 MusicXML 合卷和 PDMX 同版 MIDI。两套文件均为 OpenWTC CC0 版，所有谱面起音均吻合。BWV 866 前奏曲第 19 小节的下波音有 2 个额外 MIDI 起音，BWV 867 赋格第 49 小节的颤音有 15 个。汇总表与 demo 扩到 BWV 846–867 的 44 个乐章。 [BWV 866 来源清单](../corpus/bwv866/sources.json) · [BWV 867 来源清单](../corpus/bwv867/sources.json)
 
 BWV 868 与 869 均采用 OpenWTC CC0 版。BWV 868 的 MusicXML 和 MIDI 来自 PDMX 同一条目。前奏曲起音完全吻合，赋格的差异对应源谱第 21 小节的颤音与第 42 小节从上方邻音开始的逆波音。BWV 869 的 Artform MusicXML 与 PDMX 同版 MIDI 的差异均来自装饰音。其前奏曲的 47 个谱面小节保留两段反复记号，起音校验与播放器按 94 个小节展开。汇总表与 demo 覆盖第一卷 BWV 846–869 的全部 48 个乐章。 [BWV 868 来源清单](../corpus/bwv868/sources.json) · [BWV 869 来源清单](../corpus/bwv869/sources.json)
+
+第二卷先加入 BWV 870 和 871 的四个乐章，采用公有领域的 Noctave MusicXML 和同源 Mutopia MIDI。BWV 870 前奏曲的 MIDI 在第 30 小节重新起音，谱面保留 F5 延音。赋格的第 71 小节有一次重复释放，起音全部吻合。BWV 871 的两个乐章起音全部吻合，前奏曲按参考 MIDI 的 28 个书写小节校验，试听按谱展开为 56 个小节。汇总表与 demo 覆盖 BWV 846–871 的 52 个乐章。 [BWV 870 来源清单](../corpus/bwv870/sources.json) · [BWV 871 来源清单](../corpus/bwv871/sources.json)
+
+BWV 872 与 873 采用 verits99 的 CC0 1.0 MuseScore 版，PDMX v9 提供同源 MusicXML 和 MIDI。四个乐章的主音起音全部吻合。MIDI 的额外起音在 BWV 872 前奏曲、BWV 873 前奏曲和赋格分别为 3、47 和 1 个，音高和起音位置均与谱面的倚音匹配。汇总表与 demo 覆盖 BWV 846–873 的 56 个乐章。 [BWV 872 来源清单](../corpus/bwv872/sources.json) · [BWV 873 来源清单](../corpus/bwv873/sources.json)
+
+BWV 874 采用 PDMX v9 中 verits99 的 CC0 1.0 羽管键琴合卷。前奏曲第 108 小节的 G3 已与同版 MIDI 和 Keith Snortum 键盘版交叉核对。前奏曲覆盖源谱第 1–112 小节，赋格保留第 114–163 小节的编号，原始合卷保留两乐章之间的第 113 小节。BWV 875 前奏曲采用 Noctave 与 Mutopia 的公有领域同源版，赋格采用 PDMX v9 的 CC0 1.0 版。四个乐章的谱面起音与各自的上游 MIDI 完全吻合。汇总表与 demo 覆盖 BWV 846–875 的 60 个乐章。 [BWV 874 来源清单](../corpus/bwv874/sources.json) · [BWV 875 来源清单](../corpus/bwv875/sources.json) · [键盘交叉校验版](https://github.com/ksnortum/bach-well-tempered-2/releases/tag/v0.1)

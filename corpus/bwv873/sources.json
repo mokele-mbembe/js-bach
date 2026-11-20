@@ -1,0 +1,278 @@
+{
+  "bwv": "873",
+  "key": "C-sharp minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book II",
+  "movements": [
+    {
+      "id": "bwv873-prelude",
+      "kind": "prelude",
+      "title": "Prelude in C-sharp minor",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "PDMX",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mxl.tar.gz?download=1",
+        "archiveMember": "mxl/4/56/QmezmfP5Kw6KLBfVUiSBUjtpfCCmj4sVSWKAe7dsi7LyfJ.mxl",
+        "pdmxMetadata": "metadata/8/130947.json",
+        "upstream": "https://musescore.com/user/13172/scores/130947",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "verits99 / MuseScore",
+        "sha256": "daabe6b6f5257d399025565f6cf33390fd00f56fa734ff045a08bc25c059859c",
+        "editionNotes": "This MuseScore export labels its playback instrument Harp. The score preserves both staves and the written key. The 47 additional MIDI attacks are written grace notes played at their notated ticks."
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "PDMX v9, MuseScore 130947",
+        "typesetter": "verits99",
+        "sourceEdition": "The Well-Tempered Clavier Part II (A = 440 Hz)",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/4/56/QmezmfP5Kw6KLBfVUiSBUjtpfCCmj4sVSWKAe7dsi7LyfJ.mid",
+        "pdmxMetadata": "metadata/8/130947.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "ccf43fc42a9e89641a09be57f13649511f4dc0a25e37bad23e383e2ad77dd8cc"
+      },
+      "expected": {
+        "measures": 62,
+        "attacks": 1403,
+        "graceNotes": 47,
+        "midiOnlyAttacks": [
+          {
+            "tick": 2160,
+            "midiPitch": 76
+          },
+          {
+            "tick": 4320,
+            "midiPitch": 56
+          },
+          {
+            "tick": 6480,
+            "midiPitch": 69
+          },
+          {
+            "tick": 10080,
+            "midiPitch": 75
+          },
+          {
+            "tick": 10800,
+            "midiPitch": 72
+          },
+          {
+            "tick": 12240,
+            "midiPitch": 73
+          },
+          {
+            "tick": 12960,
+            "midiPitch": 73
+          },
+          {
+            "tick": 15840,
+            "midiPitch": 73
+          },
+          {
+            "tick": 16560,
+            "midiPitch": 54
+          },
+          {
+            "tick": 18720,
+            "midiPitch": 68
+          },
+          {
+            "tick": 19440,
+            "midiPitch": 69
+          },
+          {
+            "tick": 26640,
+            "midiPitch": 71
+          },
+          {
+            "tick": 27360,
+            "midiPitch": 55
+          },
+          {
+            "tick": 36720,
+            "midiPitch": 71
+          },
+          {
+            "tick": 41040,
+            "midiPitch": 76
+          },
+          {
+            "tick": 45360,
+            "midiPitch": 57
+          },
+          {
+            "tick": 53280,
+            "midiPitch": 59
+          },
+          {
+            "tick": 54720,
+            "midiPitch": 69
+          },
+          {
+            "tick": 59760,
+            "midiPitch": 78
+          },
+          {
+            "tick": 62640,
+            "midiPitch": 73
+          },
+          {
+            "tick": 66240,
+            "midiPitch": 78
+          },
+          {
+            "tick": 66960,
+            "midiPitch": 77
+          },
+          {
+            "tick": 67680,
+            "midiPitch": 78
+          },
+          {
+            "tick": 71280,
+            "midiPitch": 73
+          },
+          {
+            "tick": 72000,
+            "midiPitch": 50
+          },
+          {
+            "tick": 73440,
+            "midiPitch": 80
+          },
+          {
+            "tick": 76320,
+            "midiPitch": 71
+          },
+          {
+            "tick": 77760,
+            "midiPitch": 73
+          },
+          {
+            "tick": 80640,
+            "midiPitch": 73
+          },
+          {
+            "tick": 81360,
+            "midiPitch": 66
+          },
+          {
+            "tick": 84240,
+            "midiPitch": 76
+          },
+          {
+            "tick": 90720,
+            "midiPitch": 76
+          },
+          {
+            "tick": 92160,
+            "midiPitch": 75
+          },
+          {
+            "tick": 92880,
+            "midiPitch": 72
+          },
+          {
+            "tick": 94320,
+            "midiPitch": 73
+          },
+          {
+            "tick": 95040,
+            "midiPitch": 73
+          },
+          {
+            "tick": 97200,
+            "midiPitch": 71
+          },
+          {
+            "tick": 103680,
+            "midiPitch": 64
+          },
+          {
+            "tick": 105840,
+            "midiPitch": 64
+          },
+          {
+            "tick": 112320,
+            "midiPitch": 68
+          },
+          {
+            "tick": 112320,
+            "midiPitch": 71
+          },
+          {
+            "tick": 116640,
+            "midiPitch": 54
+          },
+          {
+            "tick": 117360,
+            "midiPitch": 71
+          },
+          {
+            "tick": 123840,
+            "midiPitch": 68
+          },
+          {
+            "tick": 123840,
+            "midiPitch": 76
+          },
+          {
+            "tick": 124560,
+            "midiPitch": 60
+          },
+          {
+            "tick": 125280,
+            "midiPitch": 75
+          }
+        ]
+      }
+    },
+    {
+      "id": "bwv873-fugue",
+      "kind": "fugue",
+      "title": "Fugue in C-sharp minor",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "PDMX",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mxl.tar.gz?download=1",
+        "archiveMember": "mxl/8/16/QmQD7Ac6oCj5NYsDaxCTrm26ZYPzFGmqRQWVnbSWzFqtZ7.mxl",
+        "pdmxMetadata": "metadata/9/130948.json",
+        "upstream": "https://musescore.com/user/13172/scores/130948",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "verits99 / MuseScore",
+        "sha256": "beda2fb644bdb8242d1439c4c6d910e053e93b2345774f465c04f2f9c267f72b",
+        "editionNotes": "This MuseScore export labels its playback instrument Harp. The score preserves both staves and the written key. The 1 additional MIDI attacks are written grace notes played at their notated ticks."
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 130948",
+        "typesetter": "verits99",
+        "sourceEdition": "The Well-Tempered Clavier Part II (A = 440 Hz)",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/8/16/QmQD7Ac6oCj5NYsDaxCTrm26ZYPzFGmqRQWVnbSWzFqtZ7.mid",
+        "pdmxMetadata": "metadata/9/130948.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "63b8eebf385403ce26e69f027b83e0f085a1224791eecd96afdf022bc5a74486"
+      },
+      "expected": {
+        "measures": 71,
+        "attacks": 1379,
+        "graceNotes": 1,
+        "midiOnlyAttacks": [
+          {
+            "tick": 68040,
+            "midiPitch": 61
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,8 +1,11 @@
+#!/usr/bin/env node
+
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname } from "node:path";
 import { currentCorpus } from "./corpus-output.js";
 import type { WorkSource } from "./corpus.js";
+import { demoAssets, workAssets } from "./demo-assets.js";
 
 const corpus = currentCorpus();
 if (!corpus) {
@@ -12,28 +15,14 @@ if (!corpus) {
 const catalog = new URL("catalog.json", corpus);
 const { works } = JSON.parse(await readFile(catalog, "utf8")) as { works: Pick<WorkSource, "bwv">[] };
 
-const assets = new Map<string, URL>([
-  ["/", new URL("../../demo/index.html", import.meta.url)],
-  ["/demo.css", new URL("../../demo/demo.css", import.meta.url)],
-  ["/corpus/catalog.json", catalog],
-]);
-
-for (const path of [
-  "/demo/main.js", "/src/oscillator-player.js", "/src/performance.js", "/src/rhythm-templates.js", "/src/score-ir.js",
-  "/src/transposed-fragments.js",
-  "/src/score-repeats.js",
-  "/src/score-ties.js",
-]) {
-  assets.set(path, new URL(`..${path}`, import.meta.url));
-}
+const root = new URL("../../", import.meta.url);
+const assets = new Map(Object.entries(demoAssets).map(([route, file]) => [route, new URL(file, root)]));
+assets.set("/corpus/catalog.json", catalog);
 
 for (const { bwv } of works) {
   const directory = new URL(`bwv${bwv}/`, corpus);
-  const { movements } = JSON.parse(await readFile(new URL("sources.json", directory), "utf8")) as WorkSource;
-  const files = ["sources.json", "compression.json", ...movements.flatMap(({ id }) => [
-    `${id}.json`, `${id}.rhythm.json`, `${id}.transposed.json`,
-  ])];
-  for (const file of files) {
+  const work = JSON.parse(await readFile(new URL("sources.json", directory), "utf8")) as WorkSource;
+  for (const file of workAssets(work)) {
     assets.set(`/corpus/bwv${bwv}/${file}`, new URL(file, directory));
   }
 }

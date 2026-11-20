@@ -7,6 +7,11 @@ export function attackKey({ tick, midiPitch }: Attack): string {
   return `${tick}:${midiPitch}`;
 }
 
+export interface MidiReferenceTiming {
+  tickRange?: [start: number, end: number];
+  repeatMode?: "performed" | "written";
+}
+
 function readReference(data: Uint8Array, [startTick, endTick]: [number, number] = [0, Infinity]) {
   const midi = parseMidi(data);
   const ticksPerQuarter = midi.header.ticksPerBeat;
@@ -14,10 +19,12 @@ function readReference(data: Uint8Array, [startTick, endTick]: [number, number] 
 
   const attacks = new Map<string, Attack>();
   const holds = new Map<number, { start: number; end: number }[]>();
+  const redundantNoteOffs: (Attack & { track: number; channel: number })[] = [];
   let end = 0;
-  for (const track of midi.tracks) {
+  for (const [trackIndex, track] of midi.tracks.entries()) {
     let tick = 0;
     const active = new Map<string, number[]>();
+    const lastRelease = new Map<string, number>();
     for (const event of track) {
       tick += event.deltaTime;
       if (event.type !== "noteOn" && event.type !== "noteOff") continue;
@@ -33,7 +40,13 @@ function readReference(data: Uint8Array, [startTick, endTick]: [number, number] 
         active.set(key, starts);
       } else {
         const start = active.get(key)?.shift();
-        assert.ok(start !== undefined, `Unmatched MIDI note-off at tick ${tick}, pitch ${midiPitch}`);
+        if (start === undefined) {
+          // Older MIDI exports can send a second release for the same note at the same tick.
+          assert.equal(lastRelease.get(key), tick, `Unmatched MIDI note-off at tick ${tick}, pitch ${midiPitch}`);
+          if (startTick <= tick && tick < endTick) redundantNoteOffs.push({ tick, midiPitch, track: trackIndex, channel });
+          continue;
+        }
+        lastRelease.set(key, tick);
         const intervals = holds.get(midiPitch) ?? [];
         intervals.push({ start: start - startTick, end: tick - startTick });
         holds.set(midiPitch, intervals);
@@ -42,20 +55,21 @@ function readReference(data: Uint8Array, [startTick, endTick]: [number, number] 
     assert.ok([...active.values()].every((starts) => starts.length === 0), "Unclosed note in MIDI reference");
     end = Math.max(end, tick);
   }
-  return { attacks, holds, ticksPerQuarter, startTick, end };
+  return { attacks, holds, ticksPerQuarter, startTick, end, redundantNoteOffs };
 }
 
-export function compareSourceAttacks(writtenScore: ScoreIR, midi: Uint8Array, tickRange?: [number, number]) {
-  const score = expandWrittenRepeats(writtenScore);
+export function compareSourceAttacks(writtenScore: ScoreIR, midi: Uint8Array, { tickRange, repeatMode = "performed" }: MidiReferenceTiming = {}) {
+  const performedScore = expandWrittenRepeats(writtenScore);
+  const comparisonScore = repeatMode === "written" ? writtenScore : performedScore;
   const reference = readReference(midi, tickRange);
-  const toMidiTick = (tick: number) => tick * reference.ticksPerQuarter / score.ticksPerQuarter;
-  const attacks = getScoreAttacks(score);
+  const toMidiTick = (tick: number) => tick * reference.ticksPerQuarter / comparisonScore.ticksPerQuarter;
+  const attacks = getScoreAttacks(comparisonScore);
   const midiGrid = attacks.map(({ tick, midiPitch }) => ({ tick: toMidiTick(tick), midiPitch, scoreTick: tick }));
   const scoreKeys = new Set(midiGrid.map(attackKey));
   const scoreOnly = midiGrid.filter((attack) => !reference.attacks.has(attackKey(attack)));
   const midiOnly = [...reference.attacks.values()].filter((attack) => !scoreKeys.has(attackKey(attack)))
     .sort((a, b) => a.tick - b.tick || a.midiPitch - b.midiPitch);
-  return { performedScore: score, reference, toMidiTick, attacks, midiGrid, scoreOnly, midiOnly };
+  return { performedScore, comparisonScore, reference, toMidiTick, attacks, midiGrid, scoreOnly, midiOnly };
 }
 
 export function describeMidiDifferences(score: ScoreIR, toMidiTick: (tick: number) => number, midiOnly: Attack[]) {
@@ -97,6 +111,7 @@ export function describeMidiDifferences(score: ScoreIR, toMidiTick: (tick: numbe
       const interval = kind === "mordent" ? midiPitch - attack.midiPitch : attack.midiPitch - midiPitch;
       return start <= attack.tick && attack.tick < end && interval >= 0 && interval <= 2;
     }).map(({ measure, kind, voice }) => ({ measure, kind, voice })),
+    onBeatGrace: graceNotes.some((note) => note.midiPitch === attack.midiPitch && note.tick === attack.tick),
     earlyGrace: graceNotes.some((note) => note.midiPitch === attack.midiPitch && attack.tick < note.tick
       && note.tick - attack.tick <= toMidiTick(score.ticksPerQuarter) / 2),
     staggeredChord: arpeggiatedNotes.some(({ start, end, midiPitch }) =>

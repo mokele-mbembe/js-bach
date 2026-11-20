@@ -1,0 +1,95 @@
+{
+  "bwv": "872",
+  "key": "C-sharp major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book II",
+  "movements": [
+    {
+      "id": "bwv872-prelude",
+      "kind": "prelude",
+      "title": "Prelude in C-sharp major",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "PDMX",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mxl.tar.gz?download=1",
+        "archiveMember": "mxl/12/31/QmUmABpPmh9mqy2TcjGKAa8RohAwVD4VbFtgRNuduXHVp5.mxl",
+        "pdmxMetadata": "metadata/6/130944.json",
+        "upstream": "https://musescore.com/user/13172/scores/130944",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "verits99 / MuseScore",
+        "sha256": "2c89c3cd6f1e39515ffb376ff4bea8d6ce00213e1ee1970facbace0d828b01da",
+        "editionNotes": "This MuseScore export labels its playback instrument Harp. The score preserves both staves and the written key. The 3 additional MIDI attacks are written grace notes played at their notated ticks."
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "PDMX v9, MuseScore 130944",
+        "typesetter": "verits99",
+        "sourceEdition": "The Well-Tempered Clavier Part II (A = 440 Hz)",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/12/31/QmUmABpPmh9mqy2TcjGKAa8RohAwVD4VbFtgRNuduXHVp5.mid",
+        "pdmxMetadata": "metadata/6/130944.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "932ba14f1dfefd2e4832a4c782e4bae717584cd8776975f99e9c34a1baa3824c"
+      },
+      "expected": {
+        "measures": 50,
+        "attacks": 809,
+        "graceNotes": 3,
+        "midiOnlyAttacks": [
+          {
+            "tick": 46800,
+            "midiPitch": 65
+          },
+          {
+            "tick": 47520,
+            "midiPitch": 60
+          },
+          {
+            "tick": 49680,
+            "midiPitch": 66
+          }
+        ]
+      }
+    },
+    {
+      "id": "bwv872-fugue",
+      "kind": "fugue",
+      "title": "Fugue in C-sharp major",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "PDMX",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mxl.tar.gz?download=1",
+        "archiveMember": "mxl/9/34/QmRNUNg6iT4uqwtfsWWqRNhv1uEwWKXQeqVvfQvqtGWByn.mxl",
+        "pdmxMetadata": "metadata/7/130945.json",
+        "upstream": "https://musescore.com/user/13172/scores/130945",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "verits99 / MuseScore",
+        "sha256": "93236ab639d11e476337fd5ba4211b4e386f682ec54bfa6f13a73e577fde8c38",
+        "editionNotes": "This MuseScore export labels its playback instrument Harp. The score preserves both staves and the written key."
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 130945",
+        "typesetter": "verits99",
+        "sourceEdition": "The Well-Tempered Clavier Part II (A = 440 Hz)",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/9/34/QmRNUNg6iT4uqwtfsWWqRNhv1uEwWKXQeqVvfQvqtGWByn.mid",
+        "pdmxMetadata": "metadata/7/130945.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "472bfd80605c46f039b801d780c518c1898c53c82dc81a81cf0f40e438a2d027"
+      },
+      "expected": {
+        "measures": 35,
+        "attacks": 813
+      }
+    }
+  ]
+}

@@ -13,6 +13,8 @@ import { parseMidi, writeMidi } from "midi-file";
 import { auditSources } from "../scripts/audit-sources.js";
 import { readPdmxRows } from "../scripts/pdmx-source.js";
 import { acquireReleaseFile } from "../scripts/source-download.js";
+import { compareSourceAttacks } from "../scripts/source-attacks.js";
+import { importMxl } from "../src/import-mxl.js";
 
 const execute = promisify(execFile);
 
@@ -31,6 +33,23 @@ async function serve(t: TestContext, request: RequestListener) {
   assert.ok(address && typeof address !== "string");
   return `http://127.0.0.1:${address.port}`;
 }
+
+test("only a repeat note-off at the same tick is redundant", async () => {
+  const score = importMxl(await readFile(new URL("../../corpus/bwv870/fugue.mxl", import.meta.url)));
+  const midi = parseMidi(await readFile(new URL("../../corpus/bwv870/fugue.reference.mid", import.meta.url)));
+  const raw = Uint8Array.from(writeMidi(midi));
+  const [redundant] = compareSourceAttacks(score, raw).reference.redundantNoteOffs;
+  assert.deepEqual(redundant, { tick: 53952, midiPitch: 60, track: 2, channel: 1 });
+  let tick = 0;
+  const duplicate = midi.tracks[redundant.track].find((event) => {
+    tick += event.deltaTime;
+    return tick === redundant.tick && event.type === "noteOff" && event.channel === redundant.channel
+      && event.noteNumber === redundant.midiPitch && event.deltaTime === 0;
+  });
+  assert.ok(duplicate);
+  duplicate.deltaTime = 1;
+  assert.throws(() => compareSourceAttacks(score, Uint8Array.from(writeMidi(midi))), /Unmatched MIDI note-off at tick 53953, pitch 60/);
+});
 
 test("a candidate outside the corpus produces a raw difference report and rejects a checksum mismatch", async (t) => {
   const root = await scratch(t);
