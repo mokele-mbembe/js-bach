@@ -1,0 +1,35 @@
+name: Publish npm preview
+
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-preview-publish
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/verify.yml
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: npm-preview
+          path: ${{ runner.temp }}/npm-preview
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Publish the verified tarball with OIDC
+        run: npm publish "$RUNNER_TEMP"/npm-preview/*.tgz --access public --tag preview
