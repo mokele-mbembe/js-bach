@@ -10,9 +10,10 @@ for (const movement of movements) {
     const score = readMovementScore(movement);
     assert.equal(score.workNumber, `BWV ${movement.bwv}`);
     assert.equal(score.measures.length, movement.expected.measures);
-    const { performedScore, reference, toMidiTick, attacks, midiGrid, scoreOnly, midiOnly } =
-      compareSourceAttacks(score, readCorpusFile(movement.referenceMidi), movement.referenceMidi.tickRange);
+    const { comparisonScore, reference, toMidiTick, attacks, midiGrid, scoreOnly, midiOnly } =
+      compareSourceAttacks(score, readCorpusFile(movement.referenceMidi), movement.referenceMidi);
     assert.equal(attacks.length, movement.expected.attacks);
+    assert.equal(reference.redundantNoteOffs.length, movement.expected.redundantMidiNoteOffs ?? 0);
     for (const { tick, scoreTick } of midiGrid) {
       assert.ok(Number.isSafeInteger(tick), `Score onset ${scoreTick} is outside the reference tick grid`);
     }
@@ -32,13 +33,13 @@ for (const movement of movements) {
     assert.equal(knownScoreOnly.size, 0, "Documented score-only attacks must be present");
     assert.equal(unplayed.size, 0, "Documented MIDI omissions must be present in the score");
 
-    const { graceNotes, differences } = describeMidiDifferences(performedScore, toMidiTick, midiOnly);
+    const { graceNotes, differences } = describeMidiDifferences(comparisonScore, toMidiTick, midiOnly);
     assert.equal(graceNotes.length, movement.expected.graceNotes ?? 0);
     const other = differences.filter((difference) => difference.ornaments.length === 0);
     assert.equal(differences.length - other.length, movement.expected.realizedOrnamentAttacks ?? 0);
     assert.deepEqual(other.map(({ attack }) => attack), movement.expected.midiOnlyAttacks ?? []);
-    for (const { attack, earlyGrace, staggeredChord, tieContinuation } of other) {
-      assert.ok(earlyGrace || staggeredChord || tieContinuation,
+    for (const { attack, onBeatGrace, earlyGrace, staggeredChord, tieContinuation } of other) {
+      assert.ok(onBeatGrace || earlyGrace || staggeredChord || tieContinuation,
         `MIDI-only attack at tick ${attack.tick}, pitch ${attack.midiPitch} must match a grace note, arpeggiated note or tie continuation`);
     }
   });

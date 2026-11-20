@@ -1,0 +1,73 @@
+{
+  "bwv": "870",
+  "key": "C major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book II",
+  "movements": [
+    {
+      "id": "bwv870-prelude",
+      "kind": "prelude",
+      "title": "Prelude in C major",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-ii-praeludium-i-bwv-870/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-ii-praeludium-i-bwv-870/bach-das-wohltemperierte-clavier-ii-praeludium-i-bwv-870.mxl",
+        "license": "Public Domain",
+        "sha256": "b56b821395002156a8d270959db557dc04b5874f47b6a74b19d316ffe2c3f360",
+        "editionNotes": "The reference MIDI reattacks the written F5 tie at the start of measure 30. The MusicXML retains the written tie."
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2018/06/01-2223",
+        "typesetter": "Urs Metzger",
+        "sourceEdition": "Bach-Gesellschaft, Leipzig: Breitkopf und Härtel, 1866",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=2223",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV870/wtk2prelude1/wtk2prelude1.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV870/wtk2prelude1/wtk2prelude1.ly",
+        "license": "Public Domain",
+        "sha256": "e4fc1f57dd0f96c1b5037218eb20225d4764af6e26082fa14a07326c667f21ed"
+      },
+      "expected": {
+        "measures": 34,
+        "attacks": 832,
+        "midiOnlyAttacks": [
+          {
+            "tick": 44544,
+            "midiPitch": 77
+          }
+        ]
+      }
+    },
+    {
+      "id": "bwv870-fugue",
+      "kind": "fugue",
+      "title": "Fugue in C major",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-ii-fuga-i-bwv-870/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-ii-fuga-i-bwv-870/bach-das-wohltemperierte-clavier-ii-fuga-i-bwv-870.mxl",
+        "license": "Public Domain",
+        "sha256": "8ffd4c306483ec6ee7a1c8cc9970b0353d0fdb2431dc32b3dec4a30fe6ff1e9b"
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "Mutopia-2013/01/08-209",
+        "typesetter": "Jarle Fagerheim",
+        "sourceEdition": "Unknown",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=209",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV870/wtk2fuga1/wtk2fuga1.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV870/wtk2fuga1/wtk2fuga1.ly",
+        "license": "Public Domain",
+        "sha256": "486b0b0818e3823b4ce5b9d37a6b77adddfb7cff4ba99dd22c1266c7695c3949",
+        "editionNotes": "The reference MIDI repeats the C4 note-off at tick 53952 in measure 71. All distinct attacks match the MusicXML."
+      },
+      "expected": {
+        "measures": 83,
+        "attacks": 1028,
+        "redundantMidiNoteOffs": 1
+      }
+    }
+  ]
+}

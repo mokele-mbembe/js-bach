@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DOMParser, onErrorStopParsing } from "@xmldom/xmldom";
 import { importMusicXml, readMxlMusicXml } from "../src/import-mxl.js";
-import { compareSourceAttacks, describeMidiDifferences } from "./source-attacks.js";
+import { compareSourceAttacks, describeMidiDifferences, type MidiReferenceTiming } from "./source-attacks.js";
 import { downloadSource, verifySourceBytes } from "./source-download.js";
 import { extractPdmxFile, pdmxMidiUrl, pdmxRelease, pdmxScoreUrl, preparePdmx, type PdmxRow } from "./pdmx-source.js";
 import { sliceScore } from "./score-slice.js";
@@ -26,7 +26,7 @@ interface InputFile {
 interface CandidateMovement {
   kind: "prelude" | "fugue";
   score: InputFile & { measureRange?: Range };
-  referenceMidi: InputFile & { tickRange?: Range };
+  referenceMidi: InputFile & MidiReferenceTiming;
 }
 
 function pdmxSelector(input: InputFile): string | undefined {
@@ -49,6 +49,8 @@ async function readCandidate(path: string) {
       `Specify a direct MusicXML download or a PDMX selector for BWV ${bwv} ${kind}`);
     assert.ok(pdmxSelector(referenceMidi) || (referenceMidi.download && referenceMidi.download !== pdmxMidiUrl),
       `Specify a direct MIDI download or a PDMX selector for BWV ${bwv} ${kind}`);
+    assert.ok(referenceMidi.repeatMode === undefined || referenceMidi.repeatMode === "written" || referenceMidi.repeatMode === "performed",
+      `Expected a written or performed MIDI repeat mode for BWV ${bwv} ${kind}`);
     for (const range of [score.measureRange, referenceMidi.tickRange]) {
       if (range === undefined) continue;
       assert.ok(Array.isArray(range) && range.length === 2 && range.every(Number.isSafeInteger) && range[0] >= 0 && range[0] < range[1],
@@ -58,23 +60,23 @@ async function readCandidate(path: string) {
   return { bwv, movements };
 }
 
-function movementReport(kind: string, scoreBytes: Buffer, midiBytes: Buffer, measureRange?: Range, tickRange?: Range) {
+function movementReport(kind: string, scoreBytes: Buffer, midiBytes: Buffer, measureRange: Range | undefined, { tickRange, repeatMode = "performed" }: MidiReferenceTiming) {
   const xml = readMxlMusicXml(scoreBytes);
   const combined = importMusicXml(xml);
   const score = measureRange ? sliceScore(combined, measureRange, kind) : combined;
-  const { performedScore, reference, toMidiTick, attacks, scoreOnly, midiOnly } = compareSourceAttacks(score, midiBytes, tickRange);
-  const { graceNotes, differences } = describeMidiDifferences(performedScore, toMidiTick, midiOnly);
+  const { performedScore, comparisonScore, reference, toMidiTick, attacks, scoreOnly, midiOnly } = compareSourceAttacks(score, midiBytes, { tickRange, repeatMode });
+  const { graceNotes, differences } = describeMidiDifferences(comparisonScore, toMidiTick, midiOnly);
   const identification = new DOMParser({ onError: onErrorStopParsing }).parseFromString(xml, "application/xml");
   const rights = Array.from(identification.getElementsByTagName("rights"), (field) => field.textContent?.trim()).filter(Boolean);
-  const measureAt = (tick: number) => performedScore.measures.find((m) => m.startTick <= tick && tick < m.startTick + m.durationTicks)?.number ?? null;
+  const measureAt = (tick: number) => comparisonScore.measures.find((m) => m.startTick <= tick && tick < m.startTick + m.durationTicks)?.number ?? null;
   return {
     kind, title: combined.title, workNumber: combined.workNumber, rights,
     measureRange: measureRange ?? [0, combined.measures.length], measures: score.measures.length,
     performedMeasures: performedScore.measures.length,
-    tickRange: tickRange ?? null, midiFileEndTick: reference.end,
+    tickRange: tickRange ?? null, midiFileEndTick: reference.end, midiRepeatMode: repeatMode,
     scoreTicksPerQuarter: score.ticksPerQuarter, midiTicksPerQuarter: reference.ticksPerQuarter,
     scoreAttacks: attacks.length, midiAttacks: reference.attacks.size, matchingAttacks: attacks.length - scoreOnly.length,
-    graceNotes: graceNotes.length,
+    graceNotes: graceNotes.length, redundantMidiNoteOffs: reference.redundantNoteOffs,
     scoreOnly: scoreOnly.map(({ tick, midiPitch, scoreTick }) => ({
       scoreTick, midiTick: tick + reference.startTick, midiPitch, measure: measureAt(scoreTick),
       withinMidiHold: reference.holds.get(midiPitch)?.some(({ start, end }) => start < tick && tick < end) ?? false,
@@ -114,6 +116,7 @@ function markdown(bwv: string, movements: AuditedMovement[]) {
     lines.push("", `## ${m.kind === "prelude" ? "Prelude" : "Fugue"}`, "",
       `Score measure indices [${m.measureRange.join(", ")}) and MIDI tick range ${m.tickRange ? `[${m.tickRange.join(", ")})` : "entire file"}. MIDI ticks below are absolute within the reference file.`, "");
     if (m.performedMeasures !== m.measures) lines.push(`The repeat signs expand ${m.measures} written measures to ${m.performedMeasures} performed measures.`, "");
+    if (m.midiRepeatMode === "written") lines.push("The MIDI attack comparison follows the written measure order, one pass per section.", "");
     const inputs = [["MusicXML", m.score, m.rights], ["Reference MIDI", m.referenceMidi, []]] as const;
     for (const [label, file, rights] of inputs) {
       const origin = file.source ?? file.download;
@@ -131,6 +134,9 @@ function markdown(bwv: string, movements: AuditedMovement[]) {
         if (notice) lines.push(`  - Embedded MusicXML rights statement\n\n    > ${notice.replace(/\s+/g, " ")}`);
       }
     }
+    for (const { tick, midiPitch, track, channel } of m.redundantMidiNoteOffs) {
+      lines.push(`- The MIDI repeats a note-off at tick ${tick} for pitch ${midiPitch} (track index ${track}, channel index ${channel}). The attack count is unaffected.`);
+    }
     if (m.scoreOnly.length > 0) {
       lines.push("", "| Measure | Score tick | MIDI tick | MIDI pitch | Within MIDI hold |", "| --- | ---: | ---: | ---: | --- |",
         ...m.scoreOnly.map((a) => `| ${a.measure ?? "—"} | ${a.scoreTick} | ${a.midiTick} | ${a.midiPitch} | ${a.withinMidiHold ? "yes" : "no"} |`));
@@ -139,6 +145,7 @@ function markdown(bwv: string, movements: AuditedMovement[]) {
       lines.push("", "| Measure | MIDI tick | MIDI pitch | Possible notation matches |", "| --- | ---: | ---: | --- |",
         ...m.midiOnly.map(({ measure, midiTick, midiPitch, notationHints: hints }) => {
           const matches = hints.ornaments.map(({ kind, measure, voice }) => `${kind} in m. ${measure}, voice ${voice}`);
+          if (hints.onBeatGrace) matches.push("grace note at its written tick");
           if (hints.earlyGrace) matches.push("grace note");
           if (hints.staggeredChord) matches.push("arpeggiated chord");
           if (hints.tieContinuation) matches.push("tie continuation");
@@ -213,7 +220,7 @@ async function auditCandidate({ bwv, movements }: Awaited<ReturnType<typeof read
       const mxl = await acquire(score, scoreAsset, `${kind}.mxl`);
       const midi = await acquire(referenceMidi, midiAsset, `${kind}.mid`);
       reports.push({
-        ...movementReport(kind, mxl.bytes, midi.bytes, score.measureRange, referenceMidi.tickRange),
+        ...movementReport(kind, mxl.bytes, midi.bytes, score.measureRange, referenceMidi),
         score: mxl.evidence,
         referenceMidi: midi.evidence,
       });

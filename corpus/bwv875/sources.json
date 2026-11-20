@@ -1,0 +1,72 @@
+{
+  "bwv": "875",
+  "key": "D minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book II",
+  "movements": [
+    {
+      "kind": "prelude",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "Noctave",
+        "source": "https://noctavepiano.com/en/free-library/bach-das-wohltemperierte-clavier-ii-praeludium-vi-bwv-875/",
+        "download": "https://noctavepiano.com/bibliotheque-libre/bach-das-wohltemperierte-clavier-ii-praeludium-vi-bwv-875/bach-das-wohltemperierte-clavier-ii-praeludium-vi-bwv-875.mxl",
+        "license": "Public Domain",
+        "sha256": "b15df50aab318d5fca2e3b89946f6c2d102a1bb684b8de152619acd597fbc2ec"
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "Mutopia-2007/05/11-974",
+        "typesetter": "Gwenaël Joret",
+        "sourceEdition": "Bach-Gesellschaft Ausgabe, Band 14 (1866)",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=974",
+        "download": "https://www.mutopiaproject.org/ftp/BachJS/BWV875/bwv875a/bwv875a.mid",
+        "engraving": "https://www.mutopiaproject.org/ftp/BachJS/BWV875/bwv875a/bwv875a.ly",
+        "license": "Public Domain",
+        "sha256": "11b796a6a4a833f359a560c216c011d61eb61cd31aa79a692b21d955d87a1b47"
+      },
+      "title": "Prelude in D minor",
+      "id": "bwv875-prelude",
+      "expected": {
+        "measures": 61,
+        "attacks": 1079
+      }
+    },
+    {
+      "kind": "fugue",
+      "title": "Fugue in D minor",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "PDMX",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mxl.tar.gz?download=1",
+        "archiveMember": "mxl/1/17/QmbeNgEemG953QBGMZ4t7UGWmdpui4w3yyUpJ9NtmBRoug.mxl",
+        "pdmxMetadata": "metadata/3/130952.json",
+        "upstream": "https://musescore.com/user/13172/scores/130952",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "verits99 / MuseScore",
+        "sha256": "7d2ea6ed75c2dccdc45c9c3106beb4a8895b8f17553cd449b5ff68756ec9fada",
+        "editionNotes": "This MuseScore export labels its playback instrument Harp. The score preserves both staves and the written key."
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 130952",
+        "typesetter": "verits99",
+        "sourceEdition": "The Well-Tempered Clavier Part II (A = 440 Hz)",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/1/17/QmbeNgEemG953QBGMZ4t7UGWmdpui4w3yyUpJ9NtmBRoug.mid",
+        "pdmxMetadata": "metadata/3/130952.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "456356a2d74f0bc2438827d3e1754ce4588d962da3999a7f451575b27de4d441"
+      },
+      "id": "bwv875-fugue",
+      "expected": {
+        "measures": 27,
+        "attacks": 798
+      }
+    }
+  ]
+}

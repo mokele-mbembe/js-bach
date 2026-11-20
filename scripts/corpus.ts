@@ -4,6 +4,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { importMxl } from "../src/import-mxl.js";
 import type { Attack, ScoreIR } from "../src/score-ir.js";
 import { sliceScore } from "./score-slice.js";
+import type { MidiReferenceTiming } from "./source-attacks.js";
 
 interface CorpusFile {
   file: string;
@@ -27,7 +28,7 @@ interface MovementSource {
   key?: string;
   voices?: VoiceGroup[];
   score: CorpusFile & { upstream?: string; measureRange?: [start: number, end: number] };
-  referenceMidi: CorpusFile & { typesetter: string; tickRange?: [start: number, end: number] };
+  referenceMidi: CorpusFile & MidiReferenceTiming & { typesetter: string };
   expected: {
     measures: number;
     attacks: number;
@@ -37,6 +38,7 @@ interface MovementSource {
     graceNotes?: number;
     midiOnlyAttacks?: Attack[];
     realizedOrnamentAttacks?: number;
+    redundantMidiNoteOffs?: number;
   };
 }
 
@@ -83,14 +85,13 @@ export function readCorpusFile({ url, sha256 }: CorpusFile & { url: URL }): Buff
 }
 
 export function readMovementScore({ bwv, id, title, composer, score: input }: (typeof movements)[number]): ScoreIR {
-  const score = importMxl(readCorpusFile(input));
-  if (!input.measureRange) return score;
-
+  const original = importMxl(readCorpusFile(input));
   // The manifest uses zero-based, half-open measure indices for a combined score.
+  const score = input.measureRange ? sliceScore(original, input.measureRange, id) : original;
   return {
-    ...sliceScore(score, input.measureRange, id),
+    ...score,
     workNumber: score.workNumber ?? `BWV ${bwv}`,
-    title,
+    title: input.measureRange ? title : score.title ?? title,
     composer: score.composer ?? composer,
   };
 }
