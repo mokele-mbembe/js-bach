@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { createHash } from "node:crypto";
 import { once } from "node:events";
 import { appendFileSync, cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -143,23 +144,64 @@ function assertGeneration(directory: string, manifest: string): void {
   }
 }
 
+function cachedSearches(log: string): string[] {
+  return [...log.matchAll(/^(\S+) — .*\(cached search\)$/gm)].map((match) => match[1]);
+}
+
 test("warm builds reuse intact encodings and recompute changed or corrupt entries", (t) => {
   const f = setup(t);
-  const cached = (log: string) => [...log.matchAll(/^(\S+) — .*\(cached search\)$/gm)].map((match) => match[1]);
-  assert.deepEqual(cached(f.build()), []);
+  assert.deepEqual(cachedSearches(f.build()), []);
   const report = () => readFileSync(join(f.current(), "compression.md"), "utf8");
   const first = report();
-  assert.deepEqual(cached(f.build()), [prelude, fugue]);
+  assert.deepEqual(cachedSearches(f.build()), [prelude, fugue]);
   assert.equal(report(), first);
   appendFileSync(join(f.current(), work, `.${prelude}.transposed.cache`), "corrupt");
-  assert.deepEqual(cached(f.build()), [fugue]);
+  assert.deepEqual(cachedSearches(f.build()), [fugue]);
   assert.equal(report(), first);
   const edited = f.saveManifest("Fixture credit B");
-  assert.deepEqual(cached(f.build()), [fugue]);
+  assert.deepEqual(cachedSearches(f.build()), [fugue]);
   const editedReport = report();
-  assert.deepEqual(cached(f.build("--fresh")), []);
+  assert.deepEqual(cachedSearches(f.build("--fresh")), []);
   assert.equal(report(), editedReport);
   assertGeneration(f.current(), edited);
+});
+
+test("a restored search cache selectively reuses validated results in a fresh checkout", (t) => {
+  const first = setup(t);
+  const cacheDirectory = join(first.root, "transposition-cache");
+  const cacheArgs = ["--cache-dir", cacheDirectory];
+  assert.deepEqual(cachedSearches(first.build(...cacheArgs)), []);
+  assert.deepEqual(readdirSync(cacheDirectory), [work]);
+  assert.deepEqual(readdirSync(join(cacheDirectory, work)).sort(), [
+    `.${fugue}.transposed.cache`, `.${prelude}.transposed.cache`,
+  ]);
+
+  const files = ["catalog.json", "compression.md", `${work}/sources.json`, `${work}/${prelude}.playback.json`, `${work}/${fugue}.playback.json`];
+  const output = (directory: string) => files.map((file) => readFileSync(join(directory, file), "utf8"));
+  const restored = setup(t);
+  assert.equal(existsSync(join(restored.root, "dist/corpus")), false);
+  assert.deepEqual(cachedSearches(restored.build(...cacheArgs)), [prelude, fugue]);
+  assert.deepEqual(output(restored.current()), output(first.current()));
+
+  const edited = restored.saveManifest("Fixture credit B");
+  assert.deepEqual(cachedSearches(restored.build(...cacheArgs)), [fugue]);
+  const editedOutput = output(restored.current());
+
+  const record = join(cacheDirectory, work, `.${fugue}.transposed.cache`);
+  const saved = readFileSync(record, "utf8");
+  const headerEnd = saved.indexOf("\n");
+  const [inputHash] = saved.slice(0, headerEnd).split(" ");
+  // A record can have a valid fingerprint and checksum but still describe the wrong score.
+  const wrongScore = JSON.stringify({ ...JSON.parse(saved.slice(headerEnd + 1)), sourceId: prelude });
+  const outputHash = createHash("sha256").update(wrongScore).digest("hex");
+  writeFileSync(record, `${inputHash} ${outputHash}\n${wrongScore}`);
+  assert.deepEqual(cachedSearches(restored.build(...cacheArgs)), [prelude]);
+  assert.deepEqual(output(restored.current()), editedOutput);
+  assert.equal(readFileSync(record, "utf8"), saved);
+
+  assert.deepEqual(cachedSearches(restored.build("--fresh")), []);
+  assert.deepEqual(output(restored.current()), editedOutput);
+  assertGeneration(restored.current(), edited);
 });
 
 test("publishing uses the same manifest bytes as the score import", async (t) => {
