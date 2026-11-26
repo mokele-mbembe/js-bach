@@ -37,7 +37,8 @@ const eventBytes = element("#event-bytes");
 const templateBytes = element("#template-bytes");
 const fragmentBytes = element("#fragment-bytes");
 
-const movements = new Map<string, Promise<Movement>>();
+const movements = new Map<string, Movement>();
+let pendingMovement: { id: string; controller: AbortController; promise: Promise<Movement> } | undefined;
 let selected: Movement | undefined;
 let selectionAttempt = 0;
 let current: { performance: Performance; label: string } | undefined;
@@ -264,25 +265,32 @@ retry.addEventListener("click", () => {
   else void loadCatalog();
 });
 
-async function fetchJson<T>(file: string): Promise<T> {
-  const response = await fetch(`${corpus}${file}`);
+async function fetchJson<T>(file: string, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(`${corpus}${file}`, { signal });
   if (!response.ok) throw new Error(`Could not load ${file}`);
   return response.json() as Promise<T>;
 }
 
-function fetchMovement(bwv: string, id: string): Promise<Movement> {
-  let pending = movements.get(id);
-  if (!pending) {
-    pending = fetchJson<PlaybackAsset>(`bwv${bwv}/${id}.playback.json`).then((asset) => {
-      if (asset.source.id !== id) throw new Error(`Unexpected score for ${id}`);
-      return { asset, performance: decodePlayback(asset.performance) };
-    }).catch((error: unknown) => {
-      movements.delete(id);
-      throw error;
-    });
-    movements.set(id, pending);
-  }
-  return pending;
+async function fetchMovement(bwv: string, id: string): Promise<Movement> {
+  if (pendingMovement?.id === id) return pendingMovement.promise;
+  pendingMovement?.controller.abort();
+  pendingMovement = undefined;
+
+  const cached = movements.get(id);
+  if (cached) return cached;
+
+  const controller = new AbortController();
+  const promise = fetchJson<PlaybackAsset>(`bwv${bwv}/${id}.playback.json`, controller.signal).then((asset) => {
+    controller.signal.throwIfAborted();
+    if (asset.source.id !== id) throw new Error(`Unexpected score for ${id}`);
+    const movement = { asset, performance: decodePlayback(asset.performance) };
+    movements.set(id, movement);
+    return movement;
+  }).finally(() => {
+    if (pendingMovement?.controller === controller) pendingMovement = undefined;
+  });
+  pendingMovement = { id, controller, promise };
+  return promise;
 }
 
 async function loadSelection(): Promise<void> {
@@ -322,7 +330,6 @@ async function loadCatalog(): Promise<void> {
     const mainWork = works.find(({ bwv }) => bwv === "846") ?? works[0];
     if (!mainWork) throw new Error("The catalog contains no works");
     workChoices.replaceChildren(...works.map(({ bwv, key }) => radioOption("work", bwv, `BWV ${bwv} · ${key}`, bwv === mainWork.bwv)));
-    element<HTMLInputElement>('input[name="movement"][value="prelude"]').checked = true;
     await loadSelection();
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not read the catalog";

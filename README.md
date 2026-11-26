@@ -14,7 +14,7 @@ Open the local player and select Prelude or Fugue for any work in The Well-Tempe
 
 The player follows simple written repeats, joins tied notes across measures, and schedules triangle oscillators with Web Audio. At a repeat jump, a tie continues when the next performed measure supplies its matching continuation. A tie stop whose start was skipped sounds as a new note. Playback uses the selected score's tempo and plays the main written notes at ornaments. The Score IR preserves grace notes as zero-duration events, which the demo skips during playback. [Performance conversion](src/performance.ts) · [Web Audio scheduler](src/oscillator-player.ts)
 
-The player loads the catalog and the BWV 846 prelude on startup. Each later selection loads one playback file and keeps it available for return visits. The measure map marks rhythm template references. The fragment list shows each selected fragment’s voice, measure range, and transposition in semitones. Every movement displays the ordinary event stream and both encoded Brotli sizes.
+The player loads the catalog and selects the BWV 846 prelude by default. It requests one playback file at a time, cancels an unfinished download on selection changes, and keeps completed downloads available for return visits. The measure map marks rhythm template references. The fragment list shows each selected fragment’s voice, measure range, and transposition in semitones. Every movement displays the ordinary event stream and both encoded Brotli sizes.
 
 ## Pack the npm preview
 
@@ -22,7 +22,7 @@ Run `npm run pack:preview` to build and write the installable tarball to `dist/n
 
 ### Release a preview on npm
 
-Set a new version in `package.json` and `package-lock.json` with `npm version <version> --no-git-tag-version` and merge the release commit into `main`. The **Verify corpus** workflow uploads the tarball, the `npm pack --dry-run` file list, and `size-report.md` as the `npm-preview` artifact. The job summary reports the tarball download size, unpacked size, and Chromium requests and response bytes through first playback of the BWV 846 prelude. Review the size report and the bundled `SCORE-LICENSES.md`.
+Set a new version in `package.json` and `package-lock.json` with `npm version <version> --no-git-tag-version` and merge the release commit into `main`. The **Verify corpus** workflow uploads the tarball, the `npm pack --dry-run` file list, and `size-report.md` as the `npm-preview` artifact. The job summary reports the tarball download size, unpacked size, and response sizes for requests Playwright observes through the first scheduled oscillator in the BWV 846 prelude. Review the size report and the bundled `SCORE-LICENSES.md`.
 
 For the first release through GitHub Actions, add a Trusted Publisher in the npm settings for `@mokele-mbembe/js-bach`. Select GitHub Actions, use `mokele-mbembe` as the owner, `js-bach` as the repository, and `publish.yml` as the workflow filename. Enable **Allow npm publish**. Complete the first release within two days of saving the binding. [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers/)
 

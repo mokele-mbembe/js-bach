@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { chromium, type Page, type Request } from "playwright";
+import { checkPreviewRaces } from "./preview-races.js";
 
 interface PackedPreview {
   name: string;
@@ -81,6 +82,7 @@ async function checkDemo(address: string) {
     await page.locator("#works").getByText(/^BWV 846 · /).click();
     await play(page, "Prelude");
     assert.deepEqual(scorePaths(), [catalog, prelude, fugue, repeatPrelude], "Work changes should fetch only the current movement and cache prior loads");
+    await checkPreviewRaces(browser, address);
     return { firstPlay, firstScore };
   } finally {
     await browser.close();
@@ -128,14 +130,15 @@ try {
     const { firstPlay, firstScore } = await checkDemo(address);
     const report = [
       "## npm preview and cold first play", "",
-      `Measured from the packed ${archive.name}@${archive.version} and a fresh Chromium page playing the BWV 846 prelude.`, "",
+      `Measured from the packed ${archive.name}@${archive.version} in a fresh Chromium page playing the BWV 846 prelude.`,
+      "Requests are counted from navigation until Playwright detects the first scheduled oscillator. Browser-internal requests such as the implicit favicon may be omitted. Byte totals cover the complete HTTP responses for the observed requests.", "",
       "| npm package | Bytes |", "| --- | ---: |",
       `| Download (.tgz) | ${download} |`,
       `| Unpacked files | ${archive.unpackedSize} |`, "",
       "| First play | Requests | Response body bytes | Response bytes with headers |", "| --- | ---: | ---: | ---: |",
-      `| Full page | ${firstPlay.count} | ${firstPlay.body} | ${firstPlay.transfer} |`,
+      `| Playwright-observed page requests | ${firstPlay.count} | ${firstPlay.body} | ${firstPlay.transfer} |`,
       `| Catalog and movement | ${firstScore.count} | ${firstScore.body} | ${firstScore.transfer} |`, "",
-      "Playback check covered lazy work and movement switches, cached return, and all four BWV 846 fugue voices.", "",
+      "Playback checks covered lazy switches, cached return, all four BWV 846 fugue voices, selection during a delayed catalog load, and cancellation during rapid switches.", "",
     ].join("\n");
     writeFileSync(join(dirname(metadata), "size-report.md"), report);
     if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, report);
