@@ -21,6 +21,9 @@
     "verify": "npm run build && node --test \"dist/test/*.test.js\" && node dist/scripts/build-corpus.js --fresh",
     "demo": "npm run build:corpus && node dist/scripts/serve-demo.js",
     "demo:serve": "npm run build && node dist/scripts/serve-demo.js",
+    "build:pages": "npm run build:corpus && npm run build:pages:built",
+    "build:pages:built": "node dist/scripts/build-pages.js",
+    "test:pages": "node dist/scripts/check-pages.js",
     "pack:preview": "npm run build:corpus && npm run pack:preview:built",
     "pack:preview:built": "node dist/scripts/pack-preview.js",
     "report:preview": "node dist/scripts/report-preview.js"

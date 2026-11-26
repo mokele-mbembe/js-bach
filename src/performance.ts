@@ -2,6 +2,8 @@ import { midiPitch, type ScoreIR } from "./score-ir.js";
 import { expandWrittenRepeats } from "./score-repeats.js";
 import { tieKey, tieStartVoice } from "./score-ties.js";
 
+export { soloVoice } from "./playback-asset.js";
+
 export interface PerformanceNote {
   startSeconds: number;
   endSeconds: number;
@@ -98,17 +100,4 @@ export function toPerformance(writtenScore: ScoreIR): Performance {
   const lastMeasure = score.measures.at(-1);
   const durationSeconds = lastMeasure ? secondsAt(lastMeasure.startTick + lastMeasure.durationTicks) : 0;
   return { notes, durationSeconds };
-}
-
-export function soloVoice(performance: Performance, voice: string | readonly string[]): Performance {
-  const ids = new Set(typeof voice === "string" ? [voice] : voice);
-  const notes = performance.notes.filter((note) => ids.has(note.voice));
-  const firstEntry = notes[0]?.startSeconds ?? 0;
-  let durationSeconds = 0;
-  const shiftedNotes = notes.map((note) => {
-    const endSeconds = note.endSeconds - firstEntry;
-    durationSeconds = Math.max(durationSeconds, endSeconds);
-    return { ...note, startSeconds: note.startSeconds - firstEntry, endSeconds };
-  });
-  return { notes: shiftedNotes, durationSeconds };
 }

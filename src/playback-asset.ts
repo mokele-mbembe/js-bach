@@ -54,3 +54,16 @@ export function decodePlayback({ durationSeconds, voices, notes }: PackedPerform
     })),
   };
 }
+
+export function soloVoice(performance: Performance, voice: string | readonly string[]): Performance {
+  const ids = new Set(typeof voice === "string" ? [voice] : voice);
+  const notes = performance.notes.filter((note) => ids.has(note.voice));
+  const firstEntry = notes[0]?.startSeconds ?? 0;
+  let durationSeconds = 0;
+  const shiftedNotes = notes.map((note) => {
+    const endSeconds = note.endSeconds - firstEntry;
+    durationSeconds = Math.max(durationSeconds, endSeconds);
+    return { ...note, startSeconds: note.startSeconds - firstEntry, endSeconds };
+  });
+  return { notes: shiftedNotes, durationSeconds };
+}

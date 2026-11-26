@@ -1,6 +1,8 @@
 # js-bach
 A verified, music-aware compiler and JavaScript runtime for the works of J.S. Bach.
 
+[Listen online](https://mokele-mbembe.github.io/js-bach/)
+
 ## Play BWV 846–877
 
 With Node.js 22 or later, install the dependencies and start the local demo.
@@ -15,6 +17,29 @@ Open the local player and select Prelude or Fugue for any work in The Well-Tempe
 The player follows simple written repeats, joins tied notes across measures, and schedules triangle oscillators with Web Audio. At a repeat jump, a tie continues when the next performed measure supplies its matching continuation. A tie stop whose start was skipped sounds as a new note. Playback uses the selected score's tempo and plays the main written notes at ornaments. The Score IR preserves grace notes as zero-duration events, which the demo skips during playback. [Performance conversion](src/performance.ts) · [Web Audio scheduler](src/oscillator-player.ts)
 
 The player loads the catalog and selects the BWV 846 prelude by default. It requests one playback file at a time, cancels an unfinished download on selection changes, and keeps completed downloads available for return visits. The measure map marks rhythm template references. The fragment list shows each selected fragment’s voice, measure range, and transposition in semitones. Every movement displays the ordinary event stream and both encoded Brotli sizes.
+
+### Build the static demo
+
+`npm run build:pages` writes the player and its catalog and playback files to `dist/pages/`. The relative URLs work under a project path. `npm run test:pages` serves that directory under a nested path and checks playback in Chromium. Install the Playwright browser with `npm exec -- playwright install --only-shell chromium` when running this check for the first time.
+
+The **Verify corpus** workflow builds and tests the static demo from the verified corpus generation. On `main`, **Deploy browser demo** uses that workflow and deploys the checked artifact to GitHub Pages. The live player links to its license and the corresponding source archive for the deployed commit. [Pages deployment workflow](.github/workflows/pages.yml)
+
+## Play from a browser app
+
+The locally packed npm preview includes an ESM entry with TypeScript declarations. Install the tarball in your browser app and call `play` from a user interaction.
+
+```js
+import { play, stop } from "@mokele-mbembe/js-bach";
+
+document.querySelector("#play").addEventListener("click", () => {
+  play("bwv846").catch((error) => {
+    if (error.name !== "AbortError") console.error(error);
+  });
+});
+document.querySelector("#stop").addEventListener("click", stop);
+```
+
+The first call starts the prelude and downloads its playback data on demand. To hear just the alto of the BWV 846 fugue, call `play("bwv846", { movement: "fugue", voice: "Alto" })`. [Browser API and installed preview guide](docs/npm-preview.md)
 
 ## Pack the npm preview
 

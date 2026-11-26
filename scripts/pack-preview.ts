@@ -35,17 +35,26 @@ function scoreLicense({ license, licenseUrl }: { license: string; licenseUrl?: s
 }
 
 try {
-  const entry = "dist/scripts/serve-demo.js";
+  const cliEntry = "dist/scripts/serve-demo.js";
+  const browserEntry = "dist/browser.js";
+  const browserTypes = "dist/browser.d.ts";
   writeFileSync(join(stage, "package.json"), `${JSON.stringify({
     name: "@mokele-mbembe/js-bach", version, description, type: "module", license, engines, repository,
-    bin: { "js-bach": entry },
+    bin: { "js-bach": cliEntry },
+    exports: { ".": { types: `./${browserTypes}`, import: `./${browserEntry}` } },
     files: ["demo/", "dist/", "source/", "SCORE-LICENSES.md"],
     publishConfig: { access: "public", tag: "preview" },
   }, null, 2)}\n`);
   copy(join(root, "LICENSE"), "LICENSE");
   copy(join(root, "docs/npm-preview.md"), "README.md");
-  const runtimeFiles = [entry, "dist/scripts/corpus-output.js", "dist/scripts/demo-assets.js", ...Object.values(demoAssets)];
+  const runtimeFiles = [cliEntry, "dist/scripts/corpus-output.js", "dist/scripts/demo-assets.js",
+    "dist/src/browser-player.js", ...Object.values(demoAssets)];
   for (const file of runtimeFiles) copy(join(root, file), file);
+  const publicTypeDependencies = ["browser-player", "oscillator-player", "playback-asset", "performance", "score-ir"];
+  for (const module of publicTypeDependencies) {
+    const path = `dist/src/${module}.d.ts`;
+    copy(join(root, path), path);
+  }
 
   const sourceFiles = ["LICENSE", "README.md", "package.json", "package-lock.json", "tsconfig.json",
     "demo/index.html", "demo/demo.css", "demo/main.ts", "docs/mvp.md", "docs/npm-preview.md"];
@@ -53,9 +62,11 @@ try {
     sourceFiles.push(...readdirSync(join(root, directory)).filter((file) => file.endsWith(".ts")).map((file) => `${directory}/${file}`));
   }
 
-  const published = `dist/corpus/builds/${generation}`;
+  const buildPath = `corpus/builds/${generation}`;
+  const published = `dist/${buildPath}`;
   for (const file of ["catalog.json", "compression.md"]) copy(join(corpusDirectory, file), `${published}/${file}`);
   writeFileSync(join(stage, "dist/corpus/current"), `${generation}\n`);
+  const browserMovements: string[] = [];
   const notices = [
     "# Score licenses", "",
     "Johann Sebastian Bach composed these works. The player code is licensed under GPL-3.0-only. The digital scores and playback data retain the terms below.", "",
@@ -71,11 +82,30 @@ try {
     sourceFiles.push(...[...new Set(["sources.json", ...originals])].map((file) => `corpus/${directory}/${file}`));
 
     for (const { id, title, score, referenceMidi } of work.movements) {
+      const playbackPath = `./${buildPath}/${directory}/${id}.playback.json`;
+      browserMovements.push(`  [${JSON.stringify(id)}, () => import(${JSON.stringify(playbackPath)}, { with: { type: "json" } }).then(({ default: asset }) => asset)],`);
       if (score.license === "CC BY-SA 4.0") assert.ok(score.attribution, `Missing ShareAlike attribution for ${id}`);
       const credit = score.attribution ?? `${referenceMidi.typesetter} / ${referenceMidi.edition}`;
       notices.push(`| BWV ${work.bwv} ${title} | ${credit} | ${scoreLicense(score, id)} · [MusicXML source](${score.source}) | ${scoreLicense(referenceMidi, id)} · [MIDI source](${referenceMidi.source}) |`);
     }
   }
+  // Literal specifiers let bundlers split movements into lazy chunks. The CLI serves the same JSON files.
+  writeFileSync(join(stage, browserEntry), [
+    `import { createBrowserPlayer } from "./src/browser-player.js";`,
+    "const movements = new Map([",
+    ...browserMovements,
+    "]);",
+    "export const { play, stop } = createBrowserPlayer((id) => movements.get(id));",
+    "",
+  ].join("\n"));
+  writeFileSync(join(stage, browserTypes), [
+    `import type { BrowserPlayer } from "./src/browser-player.js";`,
+    `export type { BrowserPlayer, PlayOptions } from "./src/browser-player.js";`,
+    `export type { Playback } from "./src/oscillator-player.js";`,
+    `export declare const play: BrowserPlayer["play"];`,
+    `export declare const stop: BrowserPlayer["stop"];`,
+    "",
+  ].join("\n"));
   writeFileSync(join(stage, "SCORE-LICENSES.md"), `${notices.join("\n")}\n`);
   for (const file of sourceFiles) copy(join(root, file), `source/${file}`);
 
