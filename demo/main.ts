@@ -2,7 +2,7 @@ import { playPerformance, type Playback } from "../src/oscillator-player.js";
 import { soloVoice, type Performance } from "../src/performance.js";
 import { decodePlayback, type PlaybackAsset } from "../src/playback-asset.js";
 
-const corpus = "/corpus/";
+const corpus = new URL("../corpus/", import.meta.url);
 
 interface Movement {
   asset: PlaybackAsset;
@@ -266,7 +266,7 @@ retry.addEventListener("click", () => {
 });
 
 async function fetchJson<T>(file: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(`${corpus}${file}`, { signal });
+  const response = await fetch(new URL(file, corpus), { signal });
   if (!response.ok) throw new Error(`Could not load ${file}`);
   return response.json() as Promise<T>;
 }

@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { chromium, type Page, type Request } from "playwright";
+import { checkBrowserApi } from "./browser-api-check.js";
 import { checkPreviewRaces } from "./preview-races.js";
 
 interface PackedPreview {
@@ -43,7 +44,7 @@ async function play(page: Page, title: string): Promise<void> {
   await page.waitForFunction(() => window.jsBachOscillatorStarts > 0);
 }
 
-async function checkDemo(address: string) {
+async function checkDemo(address: string, packageRoot: string) {
   const browser = await chromium.launch({ channel: process.env.JS_BACH_BROWSER_CHANNEL });
   try {
     const page = await browser.newPage();
@@ -83,6 +84,7 @@ async function checkDemo(address: string) {
     await play(page, "Prelude");
     assert.deepEqual(scorePaths(), [catalog, prelude, fugue, repeatPrelude], "Work changes should fetch only the current movement and cache prior loads");
     await checkPreviewRaces(browser, address);
+    await checkBrowserApi(browser, address, packageRoot);
     return { firstPlay, firstScore };
   } finally {
     await browser.close();
@@ -127,7 +129,7 @@ try {
     const [line] = await once(output, "line", { signal: AbortSignal.timeout(10_000) });
     const address = /^Demo at (http:\/\/127\.0\.0\.1:\d+\/)$/u.exec(line)?.[1];
     assert.ok(address, `Could not locate preview server: ${line}`);
-    const { firstPlay, firstScore } = await checkDemo(address);
+    const { firstPlay, firstScore } = await checkDemo(address, packageRoot);
     const report = [
       "## npm preview and cold first play", "",
       `Measured from the packed ${archive.name}@${archive.version} in a fresh Chromium page playing the BWV 846 prelude.`,
@@ -138,7 +140,8 @@ try {
       "| First play | Requests | Response body bytes | Response bytes with headers |", "| --- | ---: | ---: | ---: |",
       `| Playwright-observed page requests | ${firstPlay.count} | ${firstPlay.body} | ${firstPlay.transfer} |`,
       `| Catalog and movement | ${firstScore.count} | ${firstScore.body} | ${firstScore.transfer} |`, "",
-      "Playback checks covered lazy switches, cached return, all four BWV 846 fugue voices, selection during a delayed catalog load, and cancellation during rapid switches.", "",
+      "Playback checks covered lazy switches, cached return, all four BWV 846 fugue voices, selection during a delayed catalog load, and cancellation during rapid switches.",
+      "The packaged browser API passed Node import and TypeScript declaration checks, and Chromium verified lazy movement loading, playback, voice selection, stopping, and cancellation.", "",
     ].join("\n");
     writeFileSync(join(dirname(metadata), "size-report.md"), report);
     if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, report);
