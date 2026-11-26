@@ -28,26 +28,14 @@ jobs:
           name: corpus-compression
           path: ${{ steps.corpus.outputs.report }}
           if-no-files-found: error
-      - name: Pack and inspect the npm preview
+      - name: Pack the npm preview
         run: |
           npm run pack:preview:built
           npm pack --dry-run --ignore-scripts --json ./dist/npm/*.tgz > dist/npm/pack.json
-          node --input-type=module <<'NODE'
-          import assert from 'node:assert/strict';
-          import { readFileSync } from 'node:fs';
-
-          const reports = JSON.parse(readFileSync('dist/npm/pack.json', 'utf8'));
-          assert.equal(reports.length, 1);
-          const [archive] = reports;
-          const project = JSON.parse(readFileSync('package.json', 'utf8'));
-          assert.equal(archive.name, '@mokele-mbembe/js-bach');
-          assert.equal(archive.version, project.version);
-          const paths = new Set(archive.files.map(({ path }) => path));
-          for (const path of ['LICENSE', 'README.md', 'SCORE-LICENSES.md', 'dist/scripts/serve-demo.js', 'dist/corpus/current']) {
-            assert.ok(paths.has(path), `Missing ${path} from the npm tarball`);
-          }
-          console.log(`${archive.name}@${archive.version}, ${archive.size} bytes, ${archive.entryCount} files`);
-          NODE
+      - name: Install Chromium for the playback check
+        run: npm exec -- playwright install --with-deps --only-shell chromium
+      - name: Verify playback and report download sizes
+        run: npm run report:preview
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: npm-preview

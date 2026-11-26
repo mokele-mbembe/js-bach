@@ -1,6 +1,6 @@
 # js-bach npm preview
 
-The local player includes 60 movements from The Well-Tempered Clavier, BWV 846–875. It requires Node.js 22 or later and a browser with Web Audio.
+The local player includes 64 movements from The Well-Tempered Clavier, BWV 846–877. It requires Node.js 22 or later and a browser with Web Audio.
 
 Install the preview and start the player from your terminal.
 

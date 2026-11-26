@@ -22,7 +22,8 @@
     "demo": "npm run build:corpus && node dist/scripts/serve-demo.js",
     "demo:serve": "npm run build && node dist/scripts/serve-demo.js",
     "pack:preview": "npm run build:corpus && npm run pack:preview:built",
-    "pack:preview:built": "node dist/scripts/pack-preview.js"
+    "pack:preview:built": "node dist/scripts/pack-preview.js",
+    "report:preview": "node dist/scripts/report-preview.js"
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.9.12",
@@ -32,6 +33,7 @@
     "@types/node": "^22.20.5",
     "csv-parse": "^7.0.3",
     "midi-file": "^1.2.4",
+    "playwright": "^1.65.1",
     "typescript": "~5.9.3"
   }
 }

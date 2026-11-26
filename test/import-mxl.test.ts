@@ -19,10 +19,18 @@ for (const movement of movements) {
     }
     // Score-only pairs in the manifest use Score IR ticks. MIDI-only pairs use the reference's native ticks.
     const toMidiKey = (attack: Attack) => attackKey({ ...attack, tick: toMidiTick(attack.tick) });
+    const remainingScoreOnly = new Map(scoreOnly.map((attack) => [attackKey(attack), attack]));
+    const remainingMidiOnly = new Map(midiOnly.map((attack) => [attackKey(attack), attack]));
+    for (const { scoreTick, midiTick, midiPitch } of movement.expected.shiftedMidiAttacks ?? []) {
+      const written = toMidiKey({ tick: scoreTick, midiPitch });
+      const performed = attackKey({ tick: midiTick, midiPitch });
+      assert.ok(remainingScoreOnly.delete(written), `Missing written attack for shift ${written} to ${performed}`);
+      assert.ok(remainingMidiOnly.delete(performed), `Missing MIDI attack for shift ${written} to ${performed}`);
+    }
     const knownScoreOnly = new Set((movement.expected.scoreOnlyAttacks ?? []).map(toMidiKey));
     const unplayed = new Set((movement.expected.unplayedScoreAttacks ?? []).map(toMidiKey));
-    assert.equal(scoreOnly.length, unplayed.size + knownScoreOnly.size + (movement.expected.overlappingScoreAttacks ?? 0));
-    for (const attack of scoreOnly) {
+    assert.equal(remainingScoreOnly.size, unplayed.size + knownScoreOnly.size + (movement.expected.overlappingScoreAttacks ?? 0));
+    for (const attack of remainingScoreOnly.values()) {
       const key = attackKey(attack);
       if (unplayed.delete(key)) continue;
       knownScoreOnly.delete(key);
@@ -33,7 +41,7 @@ for (const movement of movements) {
     assert.equal(knownScoreOnly.size, 0, "Documented score-only attacks must be present");
     assert.equal(unplayed.size, 0, "Documented MIDI omissions must be present in the score");
 
-    const { graceNotes, differences } = describeMidiDifferences(comparisonScore, toMidiTick, midiOnly);
+    const { graceNotes, differences } = describeMidiDifferences(comparisonScore, toMidiTick, [...remainingMidiOnly.values()]);
     assert.equal(graceNotes.length, movement.expected.graceNotes ?? 0);
     const other = differences.filter((difference) => difference.ornaments.length === 0);
     assert.equal(differences.length - other.length, movement.expected.realizedOrnamentAttacks ?? 0);

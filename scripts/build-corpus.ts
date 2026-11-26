@@ -3,8 +3,10 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { brotliCompressSync, constants } from "node:zlib";
+import { toPerformance } from "../src/performance.js";
+import { decodePlayback, type PlaybackAsset } from "../src/playback-asset.js";
 import { encodeRhythmTemplates, expandRhythmTemplates } from "../src/rhythm-templates.js";
-import { encodeTransposedFragments, expandTransposedFragments } from "../src/transposed-fragments.js";
+import { encodeTransposedFragments, expandTransposedFragments, type TransposedScore } from "../src/transposed-fragments.js";
 import { currentCorpus, publishCorpus } from "./corpus-output.js";
 import { movements, readMovementScore, works } from "./corpus.js";
 
@@ -30,9 +32,12 @@ const encoderFingerprint = sha256(JSON.stringify([
 
 function readCachedTransposition(directory: URL, id: string, key: string): string | undefined {
   try {
-    const [inputHash, outputHash] = readFileSync(new URL(`.${id}.transposed.cache`, directory), "utf8").trim().split(" ");
+    const cache = readFileSync(new URL(`.${id}.transposed.cache`, directory), "utf8");
+    const headerEnd = cache.indexOf("\n");
+    if (headerEnd < 0) return undefined;
+    const [inputHash, outputHash] = cache.slice(0, headerEnd).split(" ");
     if (inputHash !== key) return undefined;
-    const json = readFileSync(new URL(`${id}.transposed.json`, directory), "utf8");
+    const json = cache.slice(headerEnd + 1);
     return sha256(json) === outputHash ? json : undefined;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
@@ -54,6 +59,7 @@ function sizes(json: string) {
 }
 
 const previous = fresh ? undefined : currentCorpus();
+const catalog = new Map(works.map(({ bwv, key, composer, collection }) => [bwv, { bwv, key, composer, collection }]));
 const scores = movements.map((movement) => {
   const { id, bwv, title, score: input } = movement;
   const score = readMovementScore(movement);
@@ -68,20 +74,69 @@ const scores = movements.map((movement) => {
   const original = { sourceId: id, ...score, ...(attribution ? { attribution } : {}) };
   const eventJson = JSON.stringify(original);
   const eventData = JSON.parse(eventJson);
-  const rhythmJson = JSON.stringify(encodeRhythmTemplates(original));
+  const rhythm = encodeRhythmTemplates(original);
+  const rhythmJson = JSON.stringify(rhythm);
   assert.deepEqual(expandRhythmTemplates(JSON.parse(rhythmJson)), eventData, `${id} changed during rhythm expansion`);
 
   const cacheKey = sha256(encoderFingerprint + eventJson);
   const cached = previous && readCachedTransposition(new URL(`bwv${bwv}/`, previous), id, cacheKey);
   const transposedJson = cached ?? JSON.stringify(encodeTransposedFragments(original, brotliBytes));
-  assert.deepEqual(expandTransposedFragments(JSON.parse(transposedJson)), eventData, `${id} changed during fragment expansion`);
+  const transposed: TransposedScore = JSON.parse(transposedJson);
+  assert.deepEqual(expandTransposedFragments(transposed), eventData, `${id} changed during fragment expansion`);
   const comparison = {
     eventStream: sizes(eventJson),
     rhythmEncoding: sizes(rhythmJson),
     transposedEncoding: sizes(transposedJson),
   };
-  console.log(`${id} — ${original.measures.length} measures verified, Brotli event stream ${comparison.eventStream.brotliBytes} B, rhythm ${comparison.rhythmEncoding.brotliBytes} B, transposition ${comparison.transposedEncoding.brotliBytes} B${cached === undefined ? "" : " (cached search)"}`);
-  return { id, bwv, title, original, rhythmJson, transposedJson, cacheKey, sizes: comparison };
+
+  const work = catalog.get(bwv);
+  assert.ok(work, `Missing catalog entry for BWV ${bwv}`);
+  const { durationSeconds, notes } = toPerformance(original);
+  const voiceIds = [...new Set(notes.map((note) => note.voice))];
+  const { kind, key, voices } = movement;
+  const { edition, source, license, licenseUrl, upstream } = input;
+  const midi = movement.referenceMidi;
+  const fragments = transposed.transposedFragments ?? [];
+  const playback: PlaybackAsset = {
+    work,
+    source: {
+      id, kind, title, key, voices,
+      score: {
+        edition, source, license, licenseUrl, upstream, attribution: input.attribution,
+        changes: `Converted from ${edition} MusicXML to js-bach playback data.`,
+      },
+      referenceMidi: { typesetter: midi.typesetter, edition: midi.edition, source: midi.source },
+    },
+    performance: {
+      durationSeconds,
+      voices: voiceIds,
+      notes: notes.map(({ midiPitch, startSeconds, endSeconds, voice }) =>
+        [midiPitch, startSeconds, endSeconds, voiceIds.indexOf(voice)]),
+    },
+    sizes: comparison,
+    analysis: {
+      rhythm: {
+        templateCount: rhythm.rhythmTemplates?.length ?? 0,
+        measures: rhythm.measures.map((measure) => "templateId" in measure
+          ? [measure.number, measure.templateId] : [measure.number]),
+      },
+      transposed: {
+        ticksPerQuarter: transposed.ticksPerQuarter,
+        measures: fragments.length === 0 ? [] : transposed.measures.map(({ number, startTick, durationTicks }) =>
+          [number, startTick, durationTicks]),
+        fragments: fragments.map(([fragmentNotes, occurrences]) => [
+          fragmentNotes.length,
+          Math.max(...fragmentNotes.map(([offset, duration]) => offset + duration)),
+          occurrences.map(([voice, , startTick, , pitch]) => [voice, startTick, pitch]),
+        ]),
+      },
+    },
+  };
+  const playbackJson = JSON.stringify(playback);
+  const decoded: PlaybackAsset = JSON.parse(playbackJson);
+  assert.deepEqual(decodePlayback(decoded.performance), { durationSeconds, notes }, `${id} changed during playback packing`);
+  console.log(`${id} — ${original.measures.length} measures verified, playback ${Buffer.byteLength(playbackJson, "utf8")} B, Brotli event stream ${comparison.eventStream.brotliBytes} B, rhythm ${comparison.rhythmEncoding.brotliBytes} B, transposition ${comparison.transposedEncoding.brotliBytes} B${cached === undefined ? "" : " (cached search)"}`);
+  return { id, bwv, title, playbackJson, transposedJson, cacheKey, sizes: comparison };
 });
 
 const comparisonTable = [
@@ -102,17 +157,10 @@ const published = publishCorpus((target) => {
     const directory = new URL(`bwv${bwv}/`, target);
     mkdirSync(directory);
     writeFileSync(new URL("sources.json", directory), manifest);
-    const workScores = scores.filter((score) => score.bwv === bwv);
-    for (const { id, original, rhythmJson, transposedJson, cacheKey } of workScores) {
-      writeFileSync(new URL(`${id}.json`, directory), `${JSON.stringify(original, null, 2)}\n`);
-      writeFileSync(new URL(`${id}.rhythm.json`, directory), rhythmJson);
-      writeFileSync(new URL(`${id}.transposed.json`, directory), transposedJson);
-      writeFileSync(new URL(`.${id}.transposed.cache`, directory), `${cacheKey} ${sha256(transposedJson)}\n`);
+    for (const { id, playbackJson, transposedJson, cacheKey } of scores.filter((score) => score.bwv === bwv)) {
+      writeFileSync(new URL(`${id}.playback.json`, directory), playbackJson);
+      writeFileSync(new URL(`.${id}.transposed.cache`, directory), `${cacheKey} ${sha256(transposedJson)}\n${transposedJson}`);
     }
-    writeFileSync(new URL("compression.json", directory), `${JSON.stringify({
-      brotli,
-      movements: Object.fromEntries(workScores.map(({ id, sizes }) => [id, sizes])),
-    }, null, 2)}\n`);
   }
   writeFileSync(new URL("catalog.json", target), `${JSON.stringify({ works: works.map(({ bwv, key }) => ({ bwv, key })) })}\n`);
   writeFileSync(new URL("compression.md", target), comparisonTable);

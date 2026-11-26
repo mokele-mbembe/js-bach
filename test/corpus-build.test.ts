@@ -1,14 +1,16 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { once } from "node:events";
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import type { WorkSource } from "../scripts/corpus.js";
-import { expandRhythmTemplates } from "../src/rhythm-templates.js";
-import { expandTransposedFragments } from "../src/transposed-fragments.js";
+import { sliceScore } from "../scripts/score-slice.js";
+import { importMxl } from "../src/import-mxl.js";
+import { toPerformance } from "../src/performance.js";
+import { decodePlayback, type PlaybackAsset } from "../src/playback-asset.js";
 
 const work = "bwv862";
 const prelude = `${work}-prelude`;
@@ -122,15 +124,22 @@ function assertGeneration(directory: string, manifest: string): void {
   const source: WorkSource = JSON.parse(manifest);
   assert.equal(readFileSync(join(directory, work, "sources.json"), "utf8"), manifest);
   assert.deepEqual(JSON.parse(readFileSync(join(directory, "catalog.json"), "utf8")), { works: [{ bwv: source.bwv, key: source.key }] });
+  assert.deepEqual(readdirSync(join(directory, work)).filter((file) => file.endsWith(".json")).sort(), [
+    `${fugue}.playback.json`, `${prelude}.playback.json`, "sources.json",
+  ]);
   const report = readFileSync(join(directory, "compression.md"), "utf8");
-  const { movements } = JSON.parse(readFileSync(join(directory, work, "compression.json"), "utf8"));
   for (const { id, title, score } of source.movements) {
-    const read = (suffix: string) => JSON.parse(readFileSync(join(directory, work, `${id}${suffix}.json`), "utf8"));
-    const original = read("");
-    assert.equal(original.attribution.credit, score.attribution);
-    assert.deepEqual(expandRhythmTemplates(read(".rhythm")), original);
-    assert.deepEqual(expandTransposedFragments(read(".transposed")), original);
-    assert.ok(report.includes(`| BWV ${source.bwv} ${title} | ${movements[id].eventStream.brotliBytes} | ${movements[id].rhythmEncoding.brotliBytes} | ${movements[id].transposedEncoding.brotliBytes} |`));
+    const playback: PlaybackAsset = JSON.parse(readFileSync(join(directory, work, `${id}.playback.json`), "utf8"));
+    assert.equal(playback.source.score.attribution, score.attribution);
+    assert.equal(playback.source.score.license, score.license);
+    assert.equal(playback.source.score.licenseUrl, score.licenseUrl);
+    assert.equal(playback.source.score.source, score.source);
+    assert.match(playback.source.score.changes, /Converted from .* to js-bach playback data/);
+    const original = importMxl(readFileSync(new URL(`../../corpus/${work}/${score.file}`, import.meta.url)));
+    const scoreIR = score.measureRange ? sliceScore(original, score.measureRange, id) : original;
+    assert.deepEqual(decodePlayback(playback.performance), toPerformance(scoreIR));
+    const { eventStream, rhythmEncoding, transposedEncoding } = playback.sizes;
+    assert.ok(report.includes(`| BWV ${source.bwv} ${title} | ${eventStream.brotliBytes} | ${rhythmEncoding.brotliBytes} | ${transposedEncoding.brotliBytes} |`));
   }
 }
 
@@ -142,7 +151,7 @@ test("warm builds reuse intact encodings and recompute changed or corrupt entrie
   const first = report();
   assert.deepEqual(cached(f.build()), [prelude, fugue]);
   assert.equal(report(), first);
-  writeFileSync(join(f.current(), work, `${prelude}.transposed.json`), "corrupt");
+  appendFileSync(join(f.current(), work, `.${prelude}.transposed.cache`), "corrupt");
   assert.deepEqual(cached(f.build()), [fugue]);
   assert.equal(report(), first);
   const edited = f.saveManifest("Fixture credit B");
@@ -187,19 +196,20 @@ test("overlapping builds publish whole generations and the demo stays pinned to 
   assertGeneration(other, third);
 
   rmSync(join(f.root, "corpus"), { recursive: true });
-  const oldResponse = await fetch(`${address}/corpus/${work}/sources.json`);
+  const oldResponse = await fetch(`${address}/corpus/${work}/${prelude}.playback.json`);
   assert.equal(oldResponse.status, 200);
-  assert.equal(await oldResponse.text(), f.initial);
+  assert.equal(await oldResponse.text(), readFileSync(join(initial, work, `${prelude}.playback.json`), "utf8"));
   const nextAddress = await f.startDemo();
   const catalog = await fetch(`${nextAddress}/corpus/catalog.json`);
   assert.equal(catalog.status, 200);
   assert.deepEqual(await catalog.json(), { works: [{ bwv: "862", key: "A-flat major" }] });
-  const sources = await fetch(`${nextAddress}/corpus/${work}/sources.json`);
-  assert.equal(sources.status, 200);
-  assert.equal(await sources.text(), second);
-  const encoding = await fetch(`${nextAddress}/corpus/${work}/${prelude}.transposed.json`);
-  assert.equal(encoding.status, 200);
-  assert.deepEqual(await encoding.json(), JSON.parse(readFileSync(join(f.current(), work, `${prelude}.transposed.json`), "utf8")));
+  const playback = await fetch(`${nextAddress}/corpus/${work}/${prelude}.playback.json`);
+  assert.equal(playback.status, 200);
+  assert.equal(await playback.text(), readFileSync(join(f.current(), work, `${prelude}.playback.json`), "utf8"));
+  const internal = await fetch(`${nextAddress}/corpus/${work}/sources.json`);
+  assert.equal(internal.status, 404);
+  const oldEncoding = await fetch(`${nextAddress}/corpus/${work}/${prelude}.transposed.json`);
+  assert.equal(oldEncoding.status, 404);
 });
 
 test("an interrupted staging write leaves the previous generation usable", async (t) => {
@@ -216,4 +226,13 @@ test("an interrupted staging write leaves the previous generation usable", async
   f.build();
   assert.notEqual(f.current(), initial);
   assertGeneration(f.current(), edited);
+});
+
+test("the demo reports how to rebuild a generation without playback files", (t) => {
+  const f = setup(t);
+  f.build();
+  for (const id of [prelude, fugue]) rmSync(join(f.current(), work, `${id}.playback.json`));
+  const result = spawnSync(process.execPath, ["dist/scripts/serve-demo.js"], { cwd: f.root, encoding: "utf8", timeout: 10_000 });
+  assert.equal(result.status, 1, result.stderr || String(result.error));
+  assert.match(result.stderr, /Rebuild it with npm run build:corpus/);
 });
