@@ -1,0 +1,112 @@
+{
+  "bwv": "876",
+  "key": "E-flat major",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book II",
+  "movements": [
+    {
+      "kind": "prelude",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "PDMX",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mxl.tar.gz?download=1",
+        "archiveMember": "mxl/10/39/QmSQPWpd25Sqoyiejrvyq8aMrgoVez2FSBTXFBZuHbW6nE.mxl",
+        "pdmxMetadata": "metadata/4/131061.json",
+        "upstream": "https://musescore.com/user/13172/scores/131061",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "verits99 / MuseScore",
+        "sha256": "cd4aadd03edae152a7a69d4bf193e4527bc14e2057553c1980ce21a67180ec42",
+        "editionNotes": "The MuseScore export labels its playback instrument Harp. Its MIDI plays three written grace notes on the beat and delays the corresponding main notes by one quarter note."
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "PDMX v9, MuseScore 131061",
+        "typesetter": "verits99",
+        "sourceEdition": "BWV 876 The Well-Tempered Clavier Part II Praeludium VII",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/10/39/QmSQPWpd25Sqoyiejrvyq8aMrgoVez2FSBTXFBZuHbW6nE.mid",
+        "pdmxMetadata": "metadata/4/131061.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "10e7e25fca6c8a9164ccdf6aeb45b5c1c84e365493195e4dbbdbac7540f4f8b8"
+      },
+      "title": "Prelude in E-flat major",
+      "id": "bwv876-prelude",
+      "expected": {
+        "measures": 71,
+        "attacks": 918,
+        "graceNotes": 3,
+        "midiOnlyAttacks": [
+          {
+            "tick": 2160,
+            "midiPitch": 75
+          },
+          {
+            "tick": 6480,
+            "midiPitch": 68
+          },
+          {
+            "tick": 131760,
+            "midiPitch": 75
+          }
+        ],
+        "shiftedMidiAttacks": [
+          {
+            "scoreTick": 36,
+            "midiTick": 2640,
+            "midiPitch": 74
+          },
+          {
+            "scoreTick": 108,
+            "midiTick": 6960,
+            "midiPitch": 67
+          },
+          {
+            "scoreTick": 2196,
+            "midiTick": 132240,
+            "midiPitch": 74
+          }
+        ]
+      }
+    },
+    {
+      "kind": "fugue",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "PDMX",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mxl.tar.gz?download=1",
+        "archiveMember": "mxl/0/45/QmaTqweZ8tmX7xCPwaxyKPGGpTYchKtQg2bT7eLr4NRcuX.mxl",
+        "pdmxMetadata": "metadata/5/131062.json",
+        "upstream": "https://musescore.com/user/13172/scores/131062",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "verits99 / MuseScore",
+        "sha256": "8de4afd2476ea9a45cef2b0d621f33bbfad3ab97f8dd36248663de0bf3adad17",
+        "editionNotes": "The MuseScore export labels its playback instrument Harp and preserves both keyboard staves and the written key."
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 131062",
+        "typesetter": "verits99",
+        "sourceEdition": "BWV 876 The Well-Tempered Clavier Part II Fuga VII",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/0/45/QmaTqweZ8tmX7xCPwaxyKPGGpTYchKtQg2bT7eLr4NRcuX.mid",
+        "pdmxMetadata": "metadata/5/131062.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "21ae608b26163a5423cb9cd41e063a1e45f34a34d93db872033058739624e89a"
+      },
+      "title": "Fugue in E-flat major",
+      "id": "bwv876-fugue",
+      "expected": {
+        "measures": 70,
+        "attacks": 700
+      }
+    }
+  ]
+}

@@ -37,6 +37,7 @@ interface MovementSource {
     overlappingScoreAttacks?: number;
     graceNotes?: number;
     midiOnlyAttacks?: Attack[];
+    shiftedMidiAttacks?: { scoreTick: number; midiTick: number; midiPitch: number }[];
     realizedOrnamentAttacks?: number;
     redundantMidiNoteOffs?: number;
   };

@@ -1,7 +1,7 @@
 # js-bach
 A verified, music-aware compiler and JavaScript runtime for the works of J.S. Bach.
 
-## Play BWV 846–875
+## Play BWV 846–877
 
 With Node.js 22 or later, install the dependencies and start the local demo.
 
@@ -10,11 +10,11 @@ npm ci
 npm run demo
 ```
 
-Open the local player and select Prelude or Fugue for any work in The Well-Tempered Clavier, Book I (BWV 846–869), or for the first six works in Book II (BWV 870–875). The BWV 846 and 847 fugues also offer solos that start at the selected voice’s first entry and preserve its later rests. Changing the work, movement, or voice stops the current playback. [Local player](http://127.0.0.1:4173/)
+Open the local player and select Prelude or Fugue for any work in The Well-Tempered Clavier, Book I (BWV 846–869), or for the first eight works in Book II (BWV 870–877). The BWV 846 and 847 fugues also offer solos that start at the selected voice’s first entry and preserve its later rests. Changing the work, movement, or voice stops the current playback. [Local player](http://127.0.0.1:4173/)
 
 The player follows simple written repeats, joins tied notes across measures, and schedules triangle oscillators with Web Audio. At a repeat jump, a tie continues when the next performed measure supplies its matching continuation. A tie stop whose start was skipped sounds as a new note. Playback uses the selected score's tempo and plays the main written notes at ornaments. The Score IR preserves grace notes as zero-duration events, which the demo skips during playback. [Performance conversion](src/performance.ts) · [Web Audio scheduler](src/oscillator-player.ts)
 
-The player expands the smaller encoded representation of each movement before playback. The measure map marks rhythm template references. The fragment list shows each selected fragment’s voice, measure range, and transposition in semitones. Every movement displays the ordinary event stream and both encoded Brotli sizes.
+The player loads the catalog and selects the BWV 846 prelude by default. It requests one playback file at a time, cancels an unfinished download on selection changes, and keeps completed downloads available for return visits. The measure map marks rhythm template references. The fragment list shows each selected fragment’s voice, measure range, and transposition in semitones. Every movement displays the ordinary event stream and both encoded Brotli sizes.
 
 ## Pack the npm preview
 
@@ -22,7 +22,7 @@ Run `npm run pack:preview` to build and write the installable tarball to `dist/n
 
 ### Release a preview on npm
 
-Set a new version in `package.json` and `package-lock.json` with `npm version <version> --no-git-tag-version` and merge the release commit into `main`. The **Verify corpus** workflow uploads the tarball and the output of `npm pack --dry-run` together as the `npm-preview` artifact. Review its package size, file list, and bundled `SCORE-LICENSES.md`.
+Set a new version in `package.json` and `package-lock.json` with `npm version <version> --no-git-tag-version` and merge the release commit into `main`. The **Verify corpus** workflow uploads the tarball, the `npm pack --dry-run` file list, and `size-report.md` as the `npm-preview` artifact. The job summary reports the tarball download size, unpacked size, and response sizes for requests Playwright observes through the first scheduled oscillator in the BWV 846 prelude. Review the size report and the bundled `SCORE-LICENSES.md`.
 
 For the first release through GitHub Actions, add a Trusted Publisher in the npm settings for `@mokele-mbembe/js-bach`. Select GitHub Actions, use `mokele-mbembe` as the owner, `js-bach` as the repository, and `publish.yml` as the workflow filename. Enable **Allow npm publish**. Complete the first release within two days of saving the binding. [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers/)
 
@@ -37,7 +37,7 @@ With Node.js 22 or later installed, run `npm ci` from the repository root. To ad
 Run the audit with `curl` on your `PATH`. PDMX sources also use `tar`.
 
 ```sh
-npm run audit:sources -- corpus/bwv874/sources.json corpus/bwv875/sources.json
+npm run audit:sources -- corpus/bwv876/sources.json corpus/bwv877/sources.json
 ```
 
 The command accepts new candidate JSON files anywhere on disk. Give each file a string `bwv` and one or both `movements`, each with `kind` set to `prelude` or `fugue`, a `score` object, and a `referenceMidi` object.
@@ -59,7 +59,7 @@ The audit downloads the files into `dist/source-audit/bwv*/` and writes `attack-
 Check just the works you are reviewing, then regenerate the complete comparison and demo data.
 
 ```sh
-npm run check:corpus -- 874 875
+npm run check:corpus -- 876 877
 npm run build:corpus
 ```
 
@@ -67,31 +67,33 @@ Omit the BWV numbers to check every work's attack baseline. The build reuses eac
 
 `npm run verify` runs all tests and a fresh corpus build. GitHub Actions runs it on pushes and pull requests and attaches the comparison table to the job.
 
-The build writes the Score IR, source manifests, encodings, catalog, and report to a new directory under `dist/corpus/builds/`. It atomically updates `dist/corpus/current` to the directory name once every file is ready. Older directories remain available to running demos. The importer accepts the pitched, single-part MusicXML 3.1 and 4.0 subsets used by the corpus. For works published in a single MusicXML archive, the manifest gives the measure ranges for the two movements. The output uses integer ticks, with a quarter-note division for the score, a start tick for each measure, and a measure-relative offset for each note or rest. Notes retain their written pitch, voice, staff, ties, and notation marks. Tempo comes from the imported edition when specified. [MVP plan](docs/mvp.md)
+The build writes one playback JSON per movement, the catalog, the comparison report, and the local manifest snapshots and transposition cache to a new directory under `dist/corpus/builds/`. It atomically updates `dist/corpus/current` once every file is ready. Older directories remain available to running demos. The importer accepts the pitched, single-part MusicXML 3.1 and 4.0 subsets used by the corpus. For works published in a single MusicXML archive, the manifest gives the measure ranges for the two movements. Score IR uses integer ticks and retains each note’s written pitch, voice, staff, ties, and notation marks. The build expands repeats and joins ties once when producing playback data, then checks that decoding the playback file preserves each note’s exact timing, pitch, and voice. [MVP plan](docs/mvp.md)
 
-The tests check the original file hashes and compare distinct metered `(start tick, MIDI pitch)` pairs against the upstream reference MIDI using its repeat order. The Score IR keeps repeat marks on their written measures. The manifests record expected differences from overlapping notes, realized ornaments, played grace notes, an arpeggiated chord, and reattacks at written ties. The BWV 870 fugue's reference MIDI contains a redundant note-off, which the audit reports separately. The BWV 852 prelude also pins the 15 attacks omitted from the PDMX MIDI and verified against the printed OpenWTC edition in measures 63–64. [Importer tests](test/import-mxl.test.ts) · [OpenWTC printed edition](https://upload.wikimedia.org/wikipedia/commons/d/d8/J.S._Bach_-_The_Well-Tempered_Clavier%2C_Book_1_-_OpenWTC.pdf#page=58)
+The tests check the original file hashes and compare distinct metered `(start tick, MIDI pitch)` pairs against the upstream reference MIDI using its repeat order. The Score IR keeps repeat marks on their written measures. The manifests record expected differences from overlapping notes, realized ornaments, played grace notes, an arpeggiated chord, and reattacks at written ties. The BWV 876 and 877 preludes also pin each shifted attack to its exact written tick, MIDI tick, and pitch. The BWV 870 fugue's reference MIDI contains a redundant note-off, which the audit reports separately. The BWV 852 prelude also pins the 15 attacks omitted from the PDMX MIDI and verified against the printed OpenWTC edition in measures 63–64. [Importer tests](test/import-mxl.test.ts) · [OpenWTC printed edition](https://upload.wikimedia.org/wikipedia/commons/d/d8/J.S._Bach_-_The_Well-Tempered_Clavier%2C_Book_1_-_OpenWTC.pdf#page=58)
 
 ## Compare rhythm encoding
 
-`npm run build:corpus` writes the template-encoded `.rhythm.json` files alongside the original Score IR. The build expands each encoded file and checks every Score IR field before writing the results. A template shares timing, rests, voices, ties, and notation marks only when those fields match. Each reference stores its own written pitches in event order. [Rhythm codec](src/rhythm-templates.ts) · [Round-trip tests](test/rhythm-templates.test.ts)
+`npm run build:corpus` expands the rhythm encoding and checks every field against the original Score IR. A template shares timing, rests, voices, ties, and notation marks only when those fields match. Each reference stores its own written pitches in event order. [Rhythm codec](src/rhythm-templates.ts) · [Round-trip tests](test/rhythm-templates.test.ts)
 
-The build prints the Brotli sizes and the path to the published `compression.md` table for all 60 movements. It writes a `compression.json` file per work and compares compact UTF-8 JSON for the event stream and each encoding, with Brotli text mode and quality 11.
+The build prints the Brotli sizes and the path to the published `compression.md` table for all 64 movements. The comparison uses compact UTF-8 JSON for the event stream and each encoding, with Brotli text mode and quality 11. The playback files carry the numbers used in the demo.
 
 ## Compare transposed fragments
 
-The build also writes `.transposed.json` files. The search groups metered pitched notes by exported voice ID and slides over 4–16 successive note positions on the score timeline, including written tie continuations. Matches share relative onset, duration, chromatic and diatonic intervals, ties, notation, and relative staff changes. Occurrences carry absolute anchors and event positions, which let the decoder restore spelling and event order across barlines. Rests and grace notes stay in their original positions.
+The transposition search groups metered pitched notes by exported voice ID and slides over 4–16 successive note positions on the score timeline, including written tie continuations. Matches share relative onset, duration, chromatic and diatonic intervals, ties, notation, and relative staff changes. Occurrences carry absolute anchors and event positions, which let the decoder restore spelling and event order across barlines. Rests and grace notes stay in their original positions.
 
 Each search step excludes already claimed events, ranks candidates by estimated JSON savings, and Brotli-compresses the 24 best candidates with the same parameters as the report. It keeps the best strict improvement per step. The build checks the expanded Score IR and reports fragment bytes alongside the event stream and rhythm encoding. [Fragment codec](src/transposed-fragments.ts) · [Fragment tests](test/transposed-fragments.test.ts)
 
 ## Score credits
 
-Johann Sebastian Bach composed all 60 movements. The redistributed files retain their upstream terms. BWV 846 includes CC0 and public-domain scores. The BWV 847 and 850 preludes and both movements of BWV 848, 849, 851, 853, 855, 856, 860, 861, and 865 are marked public domain. Each manifest records the edition and typesetter. [BWV 846 sources](corpus/bwv846/sources.json) · [BWV 847 sources](corpus/bwv847/sources.json) · [BWV 848 sources](corpus/bwv848/sources.json) · [BWV 849 sources](corpus/bwv849/sources.json) · [BWV 850 sources](corpus/bwv850/sources.json) · [BWV 851 sources](corpus/bwv851/sources.json) · [BWV 853 sources](corpus/bwv853/sources.json) · [BWV 855 sources](corpus/bwv855/sources.json) · [BWV 856 sources](corpus/bwv856/sources.json) · [BWV 860 sources](corpus/bwv860/sources.json) · [BWV 861 sources](corpus/bwv861/sources.json) · [BWV 865 sources](corpus/bwv865/sources.json)
+Johann Sebastian Bach composed all 64 movements. The redistributed files retain their upstream terms. BWV 846 includes CC0 and public-domain scores. The BWV 847 and 850 preludes and both movements of BWV 848, 849, 851, 853, 855, 856, 860, 861, and 865 are marked public domain. Each manifest records the edition and typesetter. [BWV 846 sources](corpus/bwv846/sources.json) · [BWV 847 sources](corpus/bwv847/sources.json) · [BWV 848 sources](corpus/bwv848/sources.json) · [BWV 849 sources](corpus/bwv849/sources.json) · [BWV 850 sources](corpus/bwv850/sources.json) · [BWV 851 sources](corpus/bwv851/sources.json) · [BWV 853 sources](corpus/bwv853/sources.json) · [BWV 855 sources](corpus/bwv855/sources.json) · [BWV 856 sources](corpus/bwv856/sources.json) · [BWV 860 sources](corpus/bwv860/sources.json) · [BWV 861 sources](corpus/bwv861/sources.json) · [BWV 865 sources](corpus/bwv865/sources.json)
 
 For Book II, BWV 870 and 871 use public-domain Noctave MusicXML and MIDI from the same Mutopia editions. [BWV 870 sources](corpus/bwv870/sources.json) · [BWV 871 sources](corpus/bwv871/sources.json)
 
 BWV 872 and 873 use verits99's CC0 1.0 MuseScore edition. PDMX v9 supplies both MusicXML and MIDI from the same entry for each movement. The original exports use Harp as the playback instrument and retain the keyboard staves and written keys. [BWV 872 sources](corpus/bwv872/sources.json) · [BWV 873 sources](corpus/bwv873/sources.json)
 
 BWV 874 uses verits99's combined harpsichord edition. The BWV 875 fugue uses verits99's separate MuseScore edition. PDMX v9 supplies the CC0 MusicXML and MIDI for both. The BWV 875 prelude uses the public-domain Noctave MusicXML and the corresponding Mutopia MIDI from Gwenaël Joret's engraving of the 1866 Bach-Gesellschaft edition. [BWV 874 sources](corpus/bwv874/sources.json) · [BWV 875 sources](corpus/bwv875/sources.json)
+
+BWV 876 and 877 use verits99's CC0 1.0 MuseScore edition. PDMX v9 supplies separate MusicXML and MIDI files for each movement. Their written attacks agree with both combined editions for each work in PDMX. [BWV 876 sources](corpus/bwv876/sources.json) · [BWV 877 sources](corpus/bwv877/sources.json)
 
 BWV 852, 854, 858, 859, 862–864, and 866–869 use Olivier Miquel’s CC0 Open Well-Tempered Clavier edition. PDMX supplies the reference MIDI for these works and the MusicXML for BWV 858 and 868. Artform supplies the MusicXML for BWV 852, 854, 859, 862–864, 866, 867, and 869. [BWV 852 sources](corpus/bwv852/sources.json) · [BWV 854 sources](corpus/bwv854/sources.json) · [BWV 858 sources](corpus/bwv858/sources.json) · [BWV 859 sources](corpus/bwv859/sources.json) · [BWV 862 sources](corpus/bwv862/sources.json) · [BWV 863 sources](corpus/bwv863/sources.json) · [BWV 864 sources](corpus/bwv864/sources.json) · [BWV 866 sources](corpus/bwv866/sources.json) · [BWV 867 sources](corpus/bwv867/sources.json) · [BWV 868 sources](corpus/bwv868/sources.json) · [BWV 869 sources](corpus/bwv869/sources.json) · [OpenWTC edition](https://welltemperedclavier.org/) · [PDMX data release](https://doi.org/10.5281/zenodo.15571083)
 

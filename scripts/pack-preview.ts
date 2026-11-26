@@ -66,7 +66,7 @@ try {
   for (const work of works) {
     const directory = `bwv${work.bwv}`;
     assert.ok(readFileSync(join(corpusDirectory, directory, "sources.json")).equals(work.manifest), `The build for BWV ${work.bwv} is stale`);
-    for (const file of workAssets(work)) copy(join(corpusDirectory, directory, file), `${published}/${directory}/${file}`);
+    for (const file of workAssets(work.bwv)) copy(join(corpusDirectory, directory, file), `${published}/${directory}/${file}`);
     const originals = work.movements.flatMap(({ score, referenceMidi }) => [score.file, referenceMidi.file]);
     sourceFiles.push(...[...new Set(["sources.json", ...originals])].map((file) => `corpus/${directory}/${file}`));
 

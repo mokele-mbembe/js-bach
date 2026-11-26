@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname } from "node:path";
 import { currentCorpus } from "./corpus-output.js";
@@ -14,6 +14,17 @@ if (!corpus) {
 }
 const catalog = new URL("catalog.json", corpus);
 const { works } = JSON.parse(await readFile(catalog, "utf8")) as { works: Pick<WorkSource, "bwv">[] };
+const first = works[0];
+if (first) {
+  const filename = workAssets(first.bwv)[0];
+  try {
+    await access(new URL(`bwv${first.bwv}/${filename}`, corpus));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    console.error("The current corpus has no playback files. Rebuild it with npm run build:corpus, or start with npm run demo.");
+    process.exit(1);
+  }
+}
 
 const root = new URL("../../", import.meta.url);
 const assets = new Map(Object.entries(demoAssets).map(([route, file]) => [route, new URL(file, root)]));
@@ -21,8 +32,7 @@ assets.set("/corpus/catalog.json", catalog);
 
 for (const { bwv } of works) {
   const directory = new URL(`bwv${bwv}/`, corpus);
-  const work = JSON.parse(await readFile(new URL("sources.json", directory), "utf8")) as WorkSource;
-  for (const file of workAssets(work)) {
+  for (const file of workAssets(bwv)) {
     assets.set(`/corpus/bwv${bwv}/${file}`, new URL(file, directory));
   }
 }

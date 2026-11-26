@@ -42,13 +42,14 @@
         <div class="transport">
           <button id="play" type="button" disabled>Play</button>
           <button id="stop" type="button" disabled>Stop</button>
-          <p id="status" role="status">Loading scores…</p>
+          <button id="retry" type="button" hidden>Retry</button>
+          <p id="status" role="status">Loading catalog…</p>
         </div>
       </div>
 
       <section id="encoding" class="encoding" aria-labelledby="encoding-title" hidden>
-        <h2 id="encoding-title">Score encoding</h2>
-        <h3>Brotli size</h3>
+        <h2 id="encoding-title">Score encoding comparison</h2>
+        <h3>Brotli size by encoding</h3>
         <dl class="compression">
           <div><dt>Event stream</dt><dd id="event-bytes"></dd></div>
           <div><dt>Rhythm encoding</dt><dd id="template-bytes"></dd></div>

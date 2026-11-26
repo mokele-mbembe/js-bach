@@ -1,23 +1,12 @@
 import { playPerformance, type Playback } from "../src/oscillator-player.js";
-import { soloVoice, toPerformance, type Performance } from "../src/performance.js";
-import { expandRhythmTemplates, type RhythmEncodedScore } from "../src/rhythm-templates.js";
-import { expandTransposedFragments, type TransposedScore } from "../src/transposed-fragments.js";
-import type { VoiceGroup, WorkSource } from "../scripts/corpus.js";
+import { soloVoice, type Performance } from "../src/performance.js";
+import { decodePlayback, type PlaybackAsset } from "../src/playback-asset.js";
 
 const corpus = "/corpus/";
 
-interface CompressionSizes {
-  eventStream: { brotliBytes: number };
-  rhythmEncoding: { brotliBytes: number };
-  transposedEncoding: { brotliBytes: number };
-}
-
 interface Movement {
-  score: Performance;
-  source: WorkSource["movements"][number];
-  sizes: CompressionSizes;
-  rhythm: RhythmEncodedScore;
-  transposed: TransposedScore;
+  asset: PlaybackAsset;
+  performance: Performance;
 }
 
 function element<T extends HTMLElement>(selector: string): T {
@@ -33,6 +22,7 @@ const voices = element<HTMLFieldSetElement>("#voices");
 const voiceChoices = element("#voice-choices");
 const play = element<HTMLButtonElement>("#play");
 const stop = element<HTMLButtonElement>("#stop");
+const retry = element<HTMLButtonElement>("#retry");
 const status = element("#status");
 const progress = element<HTMLProgressElement>("#progress");
 const elapsed = element("#elapsed");
@@ -47,9 +37,11 @@ const eventBytes = element("#event-bytes");
 const templateBytes = element("#template-bytes");
 const fragmentBytes = element("#fragment-bytes");
 
-const works = new Map<string, WorkSource>();
 const movements = new Map<string, Movement>();
-let current: { id: string; performance: Performance; label: string } | undefined;
+let pendingMovement: { id: string; controller: AbortController; promise: Promise<Movement> } | undefined;
+let selected: Movement | undefined;
+let selectionAttempt = 0;
+let current: { performance: Performance; label: string } | undefined;
 let audio: AudioContext | undefined;
 let playback: Playback | undefined;
 let attempt = 0;
@@ -99,27 +91,26 @@ function radioOption(name: string, value: string, label: string, checked: boolea
   return option;
 }
 
-function showRhythmTemplates(encoding: RhythmEncodedScore): void {
-  const templateCount = encoding.rhythmTemplates?.length ?? 0;
-  const reusedMeasures = encoding.measures.filter((measure) => "templateId" in measure).length;
-  const measureCount = encoding.measures.length;
+function showRhythmTemplates({ templateCount, measures }: PlaybackAsset["analysis"]["rhythm"]): void {
+  const reusedMeasures = measures.filter(([, templateId]) => templateId !== undefined).length;
+  const measureCount = measures.length;
   rhythmSummary.textContent = templateCount > 0
     ? `${reusedMeasures} of ${measureCount} measures use shared rhythm templates.`
     : `All ${measureCount} measures are stored as individual events.`;
 
   measureMap.hidden = templateCount === 0;
-  measureMap.replaceChildren(...(templateCount === 0 ? [] : encoding.measures.map((measure) => {
+  measureMap.replaceChildren(...(templateCount === 0 ? [] : measures.map(([measureNumber, templateId]) => {
     const item = document.createElement("li");
     const number = document.createElement("span");
     const label = document.createElement("small");
-    number.textContent = measure.number;
-    if ("templateId" in measure) {
-      const templateNumber = measure.templateId + 1;
+    number.textContent = measureNumber;
+    if (templateId !== undefined) {
+      const templateNumber = templateId + 1;
       item.dataset.template = String(templateNumber);
-      item.setAttribute("aria-label", `Measure ${measure.number}, template ${templateNumber}`);
+      item.setAttribute("aria-label", `Measure ${measureNumber}, template ${templateNumber}`);
       label.textContent = `T${templateNumber}`;
     } else {
-      item.setAttribute("aria-label", `Measure ${measure.number}, individual events`);
+      item.setAttribute("aria-label", `Measure ${measureNumber}, individual events`);
       label.textContent = "Events";
     }
     item.append(number, label);
@@ -127,42 +118,43 @@ function showRhythmTemplates(encoding: RhythmEncodedScore): void {
   })));
 }
 
-function showTransposedFragments(encoding: TransposedScore, voiceGroups: VoiceGroup[]): void {
-  const groups = encoding.transposedFragments ?? [];
-  const count = groups.reduce((sum, [, occurrences]) => sum + occurrences.length, 0);
+function showTransposedFragments(
+  { ticksPerQuarter, measures, fragments }: PlaybackAsset["analysis"]["transposed"],
+  voiceGroups: NonNullable<PlaybackAsset["source"]["voices"]>,
+): void {
+  const count = fragments.reduce((sum, [, , occurrences]) => sum + occurrences.length, 0);
   const voiceNames = new Map(voiceGroups.flatMap(({ name, ids }) => ids.map((id) => [id, name] as const)));
   fragmentSummary.textContent = count > 0
-    ? `${count} occurrences of ${groups.length} shared fragments. Shifts are measured from the first occurrence shown for each fragment.`
+    ? `${count} occurrences of ${fragments.length} shared fragments. Shifts are measured from the first occurrence shown for each fragment.`
     : "The fragment search kept the ordinary event stream.";
   fragmentMap.hidden = count === 0;
 
-  const containingMeasure = (tick: number) => encoding.measures.find((measure) =>
-    tick >= measure.startTick && tick < measure.startTick + measure.durationTicks,
+  const containingMeasure = (tick: number) => measures.find(([, start, duration]) =>
+    tick >= start && tick < start + duration,
   );
 
-  fragmentMap.replaceChildren(...groups.map(([notes, occurrences], index) => {
+  fragmentMap.replaceChildren(...fragments.map(([noteCount, length, occurrences], index) => {
     const item = document.createElement("li");
     item.className = "fragment-group";
     const title = document.createElement("h3");
-    title.textContent = `Fragment ${index + 1} · ${notes.length} notes`;
+    title.textContent = `Fragment ${index + 1} · ${noteCount} notes`;
     const locations = document.createElement("ul");
     locations.className = "fragment-locations";
-    const length = Math.max(...notes.map(([offset, duration]) => offset + duration));
-    const originPitch = occurrences[0][4];
+    const originPitch = occurrences[0][2];
 
-    for (const [voice, , start, , pitch] of occurrences) {
+    for (const [voice, start, pitch] of occurrences) {
       const first = containingMeasure(start);
       const last = containingMeasure(start + length - 1);
       if (!first || !last) throw new Error(`Missing measure for fragment at tick ${start}`);
-      const measures = first === last ? `m. ${first.number}` : `mm. ${first.number}–${last.number}`;
+      const location = first === last ? `m. ${first[0]}` : `mm. ${first[0]}–${last[0]}`;
       const part = voiceNames.get(voice) ?? `Voice ${voice}`;
-      const beat = 1 + (start - first.startTick) / encoding.ticksPerQuarter;
+      const beat = 1 + (start - first[1]) / ticksPerQuarter;
       const shift = pitch - originPitch;
       const marker = document.createElement("li");
-      marker.title = `${part}, ${measures}, starts on beat ${beat}, ${shift} semitones`;
+      marker.title = `${part}, ${location}, starts on beat ${beat}, ${shift} semitones`;
       const interval = document.createElement("span");
       interval.textContent = `${shift > 0 ? "+" : ""}${shift} st`;
-      marker.append(`${part} · ${measures}`, interval);
+      marker.append(`${part} · ${location}`, interval);
       locations.append(marker);
     }
 
@@ -171,50 +163,29 @@ function showTransposedFragments(encoding: TransposedScore, voiceGroups: VoiceGr
   }));
 }
 
-function showEncoding(movement: Movement): void {
-  const { sizes } = movement;
-  showRhythmTemplates(movement.rhythm);
-  showTransposedFragments(movement.transposed, movement.source.voices ?? []);
+function showEncoding({ analysis, sizes, source }: PlaybackAsset): void {
+  showRhythmTemplates(analysis.rhythm);
+  showTransposedFragments(analysis.transposed, source.voices ?? []);
   eventBytes.textContent = `${sizes.eventStream.brotliBytes.toLocaleString("en-US")} B`;
   templateBytes.textContent = `${sizes.rhythmEncoding.brotliBytes.toLocaleString("en-US")} B`;
   fragmentBytes.textContent = `${sizes.transposedEncoding.brotliBytes.toLocaleString("en-US")} B`;
   encodingPanel.hidden = false;
 }
 
-function updateSelection(): void {
-  const bwv = document.querySelector<HTMLInputElement>('input[name="work"]:checked')?.value;
-  const work = bwv && works.get(bwv);
-  if (!work) return;
-  stopPlayback();
-  const kind = element<HTMLInputElement>('input[name="movement"]:checked').value;
-  const source = work.movements.find((candidate) => candidate.kind === kind);
-  const movement = source && movements.get(source.id);
-  if (!movement) return;
-
-  const groups = movement.source.voices ?? [];
+function showMovement(movement: Movement): void {
+  const { asset } = movement;
+  const { source, work } = asset;
+  const groups = source.voices ?? [];
+  showEncoding(asset);
   voices.hidden = groups.length === 0;
   voices.disabled = groups.length === 0;
-  if (current?.id !== movement.source.id) {
-    voiceChoices.replaceChildren(
-      radioOption("voice", "all", "All voices", true),
-      ...groups.map(({ name }) => radioOption("voice", name, name, false)),
-    );
-  }
-  const voice = element<HTMLInputElement>('input[name="voice"]:checked').value;
-  const group = groups.find(({ name }) => name === voice);
-  const label = kind === "fugue" ? "Fugue" : "Prelude";
-  current = {
-    id: movement.source.id,
-    performance: group ? soloVoice(movement.score, group.ids) : movement.score,
-    label: group ? `${label} · ${group.name}` : label,
-  };
+  voiceChoices.replaceChildren(
+    radioOption("voice", "all", "All voices", true),
+    ...groups.map(({ name }) => radioOption("voice", name, name, false)),
+  );
   catalogue.textContent = `BWV ${work.bwv} / ${source.key ?? work.key} / ${work.collection}`;
-  progress.max = current.performance.durationSeconds;
-  duration.textContent = formatTime(current.performance.durationSeconds);
-  setTransport(false, "Ready");
-  showEncoding(movement);
 
-  const { title, score, referenceMidi } = movement.source;
+  const { title, score, referenceMidi } = source;
   const attribution = score.attribution ?? `${referenceMidi.typesetter} / Mutopia Project (${referenceMidi.edition})`;
   credits.replaceChildren(
     `${work.composer}, ${title}, BWV ${work.bwv}. MusicXML from `,
@@ -223,8 +194,28 @@ function updateSelection(): void {
     score.licenseUrl ? link(score.license, score.licenseUrl) : score.license.toLowerCase(),
     "), based on the ",
     link(attribution, score.upstream ?? referenceMidi.source),
-    ". Converted to js-bach score data.",
+    ". ",
+    score.changes,
   );
+
+  selected = movement;
+  updateVoice();
+}
+
+function updateVoice(): void {
+  if (!selected) return;
+  stopPlayback();
+  const { source } = selected.asset;
+  const voice = element<HTMLInputElement>('input[name="voice"]:checked').value;
+  const group = source.voices?.find(({ name }) => name === voice);
+  const label = source.kind === "fugue" ? "Fugue" : "Prelude";
+  current = {
+    performance: group ? soloVoice(selected.performance, group.ids) : selected.performance,
+    label: group ? `${label} · ${group.name}` : label,
+  };
+  progress.max = current.performance.durationSeconds;
+  duration.textContent = formatTime(current.performance.durationSeconds);
+  setTransport(false, "Ready");
 }
 
 function updateProgress(): void {
@@ -263,46 +254,88 @@ stop.addEventListener("click", () => {
   setTransport(false, "Stopped");
 });
 
-selection.addEventListener("change", updateSelection);
+selection.addEventListener("change", ({ target }) => {
+  if (!(target instanceof HTMLInputElement)) return;
+  if (target.name === "voice") updateVoice();
+  else void loadSelection();
+});
 
-async function fetchJson<T>(file: string): Promise<T> {
-  const response = await fetch(`${corpus}${file}`);
+retry.addEventListener("click", () => {
+  if (workChoices.childElementCount > 0) void loadSelection();
+  else void loadCatalog();
+});
+
+async function fetchJson<T>(file: string, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(`${corpus}${file}`, { signal });
   if (!response.ok) throw new Error(`Could not load ${file}`);
   return response.json() as Promise<T>;
 }
 
-async function load(): Promise<void> {
+async function fetchMovement(bwv: string, id: string): Promise<Movement> {
+  if (pendingMovement?.id === id) return pendingMovement.promise;
+  pendingMovement?.controller.abort();
+  pendingMovement = undefined;
+
+  const cached = movements.get(id);
+  if (cached) return cached;
+
+  const controller = new AbortController();
+  const promise = fetchJson<PlaybackAsset>(`bwv${bwv}/${id}.playback.json`, controller.signal).then((asset) => {
+    controller.signal.throwIfAborted();
+    if (asset.source.id !== id) throw new Error(`Unexpected score for ${id}`);
+    const movement = { asset, performance: decodePlayback(asset.performance) };
+    movements.set(id, movement);
+    return movement;
+  }).finally(() => {
+    if (pendingMovement?.controller === controller) pendingMovement = undefined;
+  });
+  pendingMovement = { id, controller, promise };
+  return promise;
+}
+
+async function loadSelection(): Promise<void> {
+  const bwv = document.querySelector<HTMLInputElement>('input[name="work"]:checked')?.value;
+  if (!bwv) return;
+  const kind = element<HTMLInputElement>('input[name="movement"]:checked').value;
+  const id = `bwv${bwv}-${kind}`;
+  const request = ++selectionAttempt;
+  stopPlayback();
+  current = undefined;
+  selected = undefined;
+  voices.hidden = true;
+  voices.disabled = true;
+  encodingPanel.hidden = true;
+  catalogue.textContent = `BWV ${bwv}`;
+  credits.replaceChildren();
+  duration.textContent = formatTime(0);
+  retry.hidden = true;
+  setTransport(false, `Loading BWV ${bwv} ${kind}…`);
   try {
-    const catalog = await fetchJson<{ works: Pick<WorkSource, "bwv" | "key">[] }>("catalog.json");
-    await Promise.all(catalog.works.map(async ({ bwv }) => {
-      const path = `bwv${bwv}/`;
-      const [work, compression] = await Promise.all([
-        fetchJson<WorkSource>(`${path}sources.json`),
-        fetchJson<{ movements: Record<string, CompressionSizes> }>(`${path}compression.json`),
-      ]);
-      works.set(bwv, work);
-      await Promise.all(work.movements.map(async (source) => {
-        const { id } = source;
-        const [rhythm, transposed] = await Promise.all([
-          fetchJson<RhythmEncodedScore>(`${path}${id}.rhythm.json`),
-          fetchJson<TransposedScore>(`${path}${id}.transposed.json`),
-        ]);
-        const sizes = compression.movements[id];
-        if (!sizes) throw new Error(`Missing compression sizes for ${id}`);
-        const score = sizes.rhythmEncoding.brotliBytes <= sizes.transposedEncoding.brotliBytes
-          ? expandRhythmTemplates(rhythm)
-          : expandTransposedFragments(transposed);
-        movements.set(id, { score: toPerformance(score), source, sizes, rhythm, transposed });
-      }));
-    }));
-    workChoices.replaceChildren(...catalog.works.map(({ bwv, key }, index) => radioOption("work", bwv, `BWV ${bwv} · ${key}`, index === 0)));
-    updateSelection();
+    const movement = await fetchMovement(bwv, id);
+    if (request === selectionAttempt) showMovement(movement);
   } catch (error) {
-    works.clear();
-    movements.clear();
-    const message = error instanceof Error ? error.message : "Could not read the scores";
-    setTransport(false, `${message}. Reload to retry.`);
+    if (request !== selectionAttempt) return;
+    movements.delete(id);
+    const message = error instanceof Error ? error.message : "Could not read the score";
+    setTransport(false, `${message}. Select another movement or retry.`);
+    retry.hidden = false;
   }
 }
 
-void load();
+async function loadCatalog(): Promise<void> {
+  retry.hidden = true;
+  setTransport(false, "Loading catalog…");
+  try {
+    const { works } = await fetchJson<{ works: Pick<PlaybackAsset["work"], "bwv" | "key">[] }>("catalog.json");
+    const mainWork = works.find(({ bwv }) => bwv === "846") ?? works[0];
+    if (!mainWork) throw new Error("The catalog contains no works");
+    workChoices.replaceChildren(...works.map(({ bwv, key }) => radioOption("work", bwv, `BWV ${bwv} · ${key}`, bwv === mainWork.bwv)));
+    await loadSelection();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not read the catalog";
+    setTransport(false, `${message}. Retry to load the catalog.`);
+    retry.hidden = false;
+  }
+}
+
+void loadCatalog();

@@ -23,7 +23,7 @@
 
 导入里程碑已完成。原始 `.mxl`、参考 MIDI 和来源记录位于 `corpus/bwv846/`，两乐章的起音基准可在本地离线复验。 [来源清单](../corpus/bwv846/sources.json) · [运行命令](../README.md#import-the-corpus)
 
-播放器里程碑已完成。浏览器 demo 从导入后的 Score IR 播放两乐章，赋格的独奏试听从所选声部第一次进入开始。 [运行命令](../README.md#play-bwv-846875) · [演奏事件测试](../test/performance.test.ts)
+播放器里程碑已完成。浏览器 demo 从导入后的 Score IR 播放两乐章，赋格的独奏试听从所选声部第一次进入开始。 [运行命令](../README.md#play-bwv-846877) · [演奏事件测试](../test/performance.test.ts)
 
 节奏模板里程碑已完成。前奏曲第 1–32 小节复用同一个模板，第 33–34 小节复用另一个模板，第 35 小节保留原事件。赋格的整小节节奏编码保留原事件。构建前校验两乐章的展开结果，demo 标出复用位置并显示两种编码的 Brotli 大小。 [复验命令](../README.md#compare-rhythm-encoding)
 
@@ -58,3 +58,5 @@ BWV 868 与 869 均采用 OpenWTC CC0 版。BWV 868 的 MusicXML 和 MIDI 来自
 BWV 872 与 873 采用 verits99 的 CC0 1.0 MuseScore 版，PDMX v9 提供同源 MusicXML 和 MIDI。四个乐章的主音起音全部吻合。MIDI 的额外起音在 BWV 872 前奏曲、BWV 873 前奏曲和赋格分别为 3、47 和 1 个，音高和起音位置均与谱面的倚音匹配。汇总表与 demo 覆盖 BWV 846–873 的 56 个乐章。 [BWV 872 来源清单](../corpus/bwv872/sources.json) · [BWV 873 来源清单](../corpus/bwv873/sources.json)
 
 BWV 874 采用 PDMX v9 中 verits99 的 CC0 1.0 羽管键琴合卷。前奏曲第 108 小节的 G3 已与同版 MIDI 和 Keith Snortum 键盘版交叉核对。前奏曲覆盖源谱第 1–112 小节，赋格保留第 114–163 小节的编号，原始合卷保留两乐章之间的第 113 小节。BWV 875 前奏曲采用 Noctave 与 Mutopia 的公有领域同源版，赋格采用 PDMX v9 的 CC0 1.0 版。四个乐章的谱面起音与各自的上游 MIDI 完全吻合。汇总表与 demo 覆盖 BWV 846–875 的 60 个乐章。 [BWV 874 来源清单](../corpus/bwv874/sources.json) · [BWV 875 来源清单](../corpus/bwv875/sources.json) · [键盘交叉校验版](https://github.com/ksnortum/bach-well-tempered-2/releases/tag/v0.1)
+
+BWV 876 和 877 采用 verits99 的 CC0 1.0 分乐章 MuseScore 版，PDMX v9 提供同源 MusicXML 和 MIDI。四个乐章的书写起音逐一匹配 PDMX 中的合卷版，两首赋格也完全匹配各自的上游 MIDI。BWV 876 前奏曲的第 2、4、62 小节在 PDMX MIDI 中先奏倚音，再将主音推迟一拍。Knute Snortum 的 MIDI 也先奏这三处倚音，主音延后半拍。BWV 877 前奏曲在 PDMX MIDI 中有 30 个起音提前或延后 19 ticks，每拍 480 ticks。清单逐个固定这些同音高的起音对。汇总表与 demo 覆盖 BWV 846–877 的 64 个乐章。 [BWV 876 来源清单](../corpus/bwv876/sources.json) · [BWV 877 来源清单](../corpus/bwv877/sources.json) · [Snortum 对照版](https://github.com/ksnortum/bach-well-tempered-2/releases/tag/v0.1)

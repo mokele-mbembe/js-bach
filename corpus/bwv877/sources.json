@@ -1,0 +1,232 @@
+{
+  "bwv": "877",
+  "key": "D-sharp minor",
+  "composer": "Johann Sebastian Bach",
+  "collection": "The Well-Tempered Clavier, Book II",
+  "movements": [
+    {
+      "kind": "prelude",
+      "score": {
+        "file": "prelude.mxl",
+        "edition": "PDMX",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mxl.tar.gz?download=1",
+        "archiveMember": "mxl/9/40/QmRrtUkDvGsbwmXuWMNzUsbcDXgGJsvLwGRgiZ9RvgZJy7.mxl",
+        "pdmxMetadata": "metadata/6/131063.json",
+        "upstream": "https://musescore.com/user/13172/scores/131063",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "verits99 / MuseScore",
+        "sha256": "d77f2813942945042dd4b8e9c7eb443bfa935c6c2e0bbc48dbcac8778c986f81",
+        "editionNotes": "The MuseScore export labels its playback instrument Harp. Its MIDI moves 30 written attacks by exactly 19 ticks in either direction on a 480-tick quarter-note grid."
+      },
+      "referenceMidi": {
+        "file": "prelude.reference.mid",
+        "edition": "PDMX v9, MuseScore 131063",
+        "typesetter": "verits99",
+        "sourceEdition": "BWV 877 The Well-Tempered Clavier Part II Praeludium VIII",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/9/40/QmRrtUkDvGsbwmXuWMNzUsbcDXgGJsvLwGRgiZ9RvgZJy7.mid",
+        "pdmxMetadata": "metadata/6/131063.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "4f341273efccee94f1407192863b4fc6e3c14fedfc8b6107fec45841e00d9ba0"
+      },
+      "title": "Prelude in D-sharp minor",
+      "id": "bwv877-prelude",
+      "expected": {
+        "measures": 72,
+        "attacks": 1964,
+        "shiftedMidiAttacks": [
+          {
+            "scoreTick": 1,
+            "midiTick": 79,
+            "midiPitch": 49
+          },
+          {
+            "scoreTick": 49,
+            "midiTick": 2921,
+            "midiPitch": 74
+          },
+          {
+            "scoreTick": 61,
+            "midiTick": 3641,
+            "midiPitch": 74
+          },
+          {
+            "scoreTick": 89,
+            "midiTick": 5359,
+            "midiPitch": 78
+          },
+          {
+            "scoreTick": 105,
+            "midiTick": 6281,
+            "midiPitch": 59
+          },
+          {
+            "scoreTick": 137,
+            "midiTick": 8201,
+            "midiPitch": 58
+          },
+          {
+            "scoreTick": 153,
+            "midiTick": 9161,
+            "midiPitch": 56
+          },
+          {
+            "scoreTick": 273,
+            "midiTick": 16399,
+            "midiPitch": 77
+          },
+          {
+            "scoreTick": 441,
+            "midiTick": 26479,
+            "midiPitch": 81
+          },
+          {
+            "scoreTick": 443,
+            "midiTick": 26599,
+            "midiPitch": 81
+          },
+          {
+            "scoreTick": 445,
+            "midiTick": 26719,
+            "midiPitch": 81
+          },
+          {
+            "scoreTick": 513,
+            "midiTick": 30799,
+            "midiPitch": 49
+          },
+          {
+            "scoreTick": 561,
+            "midiTick": 33641,
+            "midiPitch": 74
+          },
+          {
+            "scoreTick": 573,
+            "midiTick": 34361,
+            "midiPitch": 74
+          },
+          {
+            "scoreTick": 601,
+            "midiTick": 36079,
+            "midiPitch": 78
+          },
+          {
+            "scoreTick": 617,
+            "midiTick": 37001,
+            "midiPitch": 59
+          },
+          {
+            "scoreTick": 649,
+            "midiTick": 38921,
+            "midiPitch": 58
+          },
+          {
+            "scoreTick": 665,
+            "midiTick": 39881,
+            "midiPitch": 56
+          },
+          {
+            "scoreTick": 785,
+            "midiTick": 47119,
+            "midiPitch": 77
+          },
+          {
+            "scoreTick": 953,
+            "midiTick": 57199,
+            "midiPitch": 81
+          },
+          {
+            "scoreTick": 955,
+            "midiTick": 57319,
+            "midiPitch": 81
+          },
+          {
+            "scoreTick": 957,
+            "midiTick": 57439,
+            "midiPitch": 81
+          },
+          {
+            "scoreTick": 1177,
+            "midiTick": 70601,
+            "midiPitch": 56
+          },
+          {
+            "scoreTick": 1193,
+            "midiTick": 71599,
+            "midiPitch": 73
+          },
+          {
+            "scoreTick": 1209,
+            "midiTick": 72559,
+            "midiPitch": 55
+          },
+          {
+            "scoreTick": 1225,
+            "midiTick": 73481,
+            "midiPitch": 71
+          },
+          {
+            "scoreTick": 1817,
+            "midiTick": 109001,
+            "midiPitch": 56
+          },
+          {
+            "scoreTick": 1833,
+            "midiTick": 109999,
+            "midiPitch": 73
+          },
+          {
+            "scoreTick": 1849,
+            "midiTick": 110959,
+            "midiPitch": 55
+          },
+          {
+            "scoreTick": 1865,
+            "midiTick": 111881,
+            "midiPitch": 71
+          }
+        ]
+      }
+    },
+    {
+      "kind": "fugue",
+      "score": {
+        "file": "fugue.mxl",
+        "edition": "PDMX",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mxl.tar.gz?download=1",
+        "archiveMember": "mxl/12/39/QmUQ7SzFLr7AVr3vagapTwT2RreU6epy8qpb1Ncpb7arN3.mxl",
+        "pdmxMetadata": "metadata/7/131064.json",
+        "upstream": "https://musescore.com/user/13172/scores/131064",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "verits99 / MuseScore",
+        "sha256": "769ce9c5717a3baebf22291898d276e3be4fdc8ab773f537d9ddb166494d66a9",
+        "editionNotes": "The MuseScore export labels its playback instrument Harp and preserves both keyboard staves and the written key."
+      },
+      "referenceMidi": {
+        "file": "fugue.reference.mid",
+        "edition": "PDMX v9, MuseScore 131064",
+        "typesetter": "verits99",
+        "sourceEdition": "BWV 877 The Well-Tempered Clavier Part II Fuga VIII",
+        "source": "https://zenodo.org/records/15571083",
+        "download": "https://zenodo.org/records/15571083/files/mid.tar.gz?download=1",
+        "archiveMember": "mid/12/39/QmUQ7SzFLr7AVr3vagapTwT2RreU6epy8qpb1Ncpb7arN3.mid",
+        "pdmxMetadata": "metadata/7/131064.json",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sha256": "6a5e2657214aa913b4429b8bb360761e5157257ae1277e55a17f884a3c502ba4"
+      },
+      "title": "Fugue in D-sharp minor",
+      "id": "bwv877-fugue",
+      "expected": {
+        "measures": 46,
+        "attacks": 1015
+      }
+    }
+  ]
+}
