@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      fresh-corpus:
+        description: Recompute all transposition searches
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -18,6 +23,7 @@ jobs:
     uses: ./.github/workflows/verify.yml
     with:
       upload-pages: true
+      reuse-transposition-cache: ${{ github.event_name != 'workflow_dispatch' || !inputs.fresh-corpus }}
 
   deploy:
     needs: verify

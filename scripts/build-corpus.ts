@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { resolve, sep } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { brotliCompressSync, constants } from "node:zlib";
 import { toPerformance } from "../src/performance.js";
 import { decodePlayback, type PlaybackAsset } from "../src/playback-asset.js";
@@ -16,8 +17,10 @@ const brotli = {
 };
 
 const args = process.argv.slice(2);
-assert.ok(args.length === 0 || (args.length === 1 && args[0] === "--fresh"), "Usage: npm run build:corpus -- [--fresh]");
-const fresh = args.length > 0;
+const fresh = args.length === 1 && args[0] === "--fresh";
+const cacheDirectory = args.length === 2 && args[0] === "--cache-dir" && args[1] && !args[1].startsWith("--")
+  ? pathToFileURL(resolve(args[1]) + sep) : undefined;
+assert.ok(args.length === 0 || fresh || cacheDirectory, "Usage: npm run build:corpus -- [--fresh | --cache-dir <directory>]");
 
 function sha256(text: string): string {
   return createHash("sha256").update(text).digest("hex");
@@ -30,17 +33,30 @@ const encoderFingerprint = sha256(JSON.stringify([
   ...encoderFiles.map((file) => readFileSync(new URL(file, import.meta.url), "utf8")),
 ]));
 
-function readCachedTransposition(directory: URL, id: string, key: string): string | undefined {
+function verifyTransposition(json: string, original: unknown, id: string): TransposedScore {
+  const transposed: TransposedScore = JSON.parse(json);
+  assert.deepEqual(expandTransposedFragments(transposed), original, `${id} changed during fragment expansion`);
+  return transposed;
+}
+
+function readCachedTransposition(file: URL, key: string, original: unknown, id: string) {
+  let cache: string;
   try {
-    const cache = readFileSync(new URL(`.${id}.transposed.cache`, directory), "utf8");
-    const headerEnd = cache.indexOf("\n");
-    if (headerEnd < 0) return undefined;
-    const [inputHash, outputHash] = cache.slice(0, headerEnd).split(" ");
-    if (inputHash !== key) return undefined;
-    const json = cache.slice(headerEnd + 1);
-    return sha256(json) === outputHash ? json : undefined;
+    cache = readFileSync(file, "utf8");
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    return undefined;
+  }
+  const headerEnd = cache.indexOf("\n");
+  if (headerEnd < 0) return undefined;
+  const header = /^([0-9a-f]{64}) ([0-9a-f]{64})$/.exec(cache.slice(0, headerEnd));
+  if (header?.[1] !== key) return undefined;
+  const json = cache.slice(headerEnd + 1);
+  if (sha256(json) !== header[2]) return undefined;
+  try {
+    return { json, transposed: verifyTransposition(json, original, id) };
+  } catch {
+    // A matching checksum alone does not make a cached codec payload usable.
     return undefined;
   }
 }
@@ -58,7 +74,7 @@ function sizes(json: string) {
   return { jsonBytes: Buffer.byteLength(json, "utf8"), brotliBytes: brotliBytes(json) };
 }
 
-const previous = fresh ? undefined : currentCorpus();
+const previous = cacheDirectory ?? (fresh ? undefined : currentCorpus());
 const catalog = new Map(works.map(({ bwv, key, composer, collection }) => [bwv, { bwv, key, composer, collection }]));
 const scores = movements.map((movement) => {
   const { id, bwv, title, score: input } = movement;
@@ -73,16 +89,15 @@ const scores = movements.map((movement) => {
   };
   const original = { sourceId: id, ...score, ...(attribution ? { attribution } : {}) };
   const eventJson = JSON.stringify(original);
-  const eventData = JSON.parse(eventJson);
+  const eventData: unknown = JSON.parse(eventJson);
   const rhythm = encodeRhythmTemplates(original);
   const rhythmJson = JSON.stringify(rhythm);
   assert.deepEqual(expandRhythmTemplates(JSON.parse(rhythmJson)), eventData, `${id} changed during rhythm expansion`);
 
   const cacheKey = sha256(encoderFingerprint + eventJson);
-  const cached = previous && readCachedTransposition(new URL(`bwv${bwv}/`, previous), id, cacheKey);
-  const transposedJson = cached ?? JSON.stringify(encodeTransposedFragments(original, brotliBytes));
-  const transposed: TransposedScore = JSON.parse(transposedJson);
-  assert.deepEqual(expandTransposedFragments(transposed), eventData, `${id} changed during fragment expansion`);
+  const cached = previous && readCachedTransposition(new URL(`bwv${bwv}/.${id}.transposed.cache`, previous), cacheKey, eventData, id);
+  const transposedJson = cached?.json ?? JSON.stringify(encodeTransposedFragments(original, brotliBytes));
+  const transposed = cached?.transposed ?? verifyTransposition(transposedJson, eventData, id);
   const comparison = {
     eventStream: sizes(eventJson),
     rhythmEncoding: sizes(rhythmJson),
@@ -136,7 +151,8 @@ const scores = movements.map((movement) => {
   const decoded: PlaybackAsset = JSON.parse(playbackJson);
   assert.deepEqual(decodePlayback(decoded.performance), { durationSeconds, notes }, `${id} changed during playback packing`);
   console.log(`${id} — ${original.measures.length} measures verified, playback ${Buffer.byteLength(playbackJson, "utf8")} B, Brotli event stream ${comparison.eventStream.brotliBytes} B, rhythm ${comparison.rhythmEncoding.brotliBytes} B, transposition ${comparison.transposedEncoding.brotliBytes} B${cached === undefined ? "" : " (cached search)"}`);
-  return { id, bwv, title, playbackJson, transposedJson, cacheKey, sizes: comparison };
+  const cacheRecord = `${cacheKey} ${sha256(transposedJson)}\n${transposedJson}`;
+  return { id, bwv, title, playbackJson, cacheRecord, cacheHit: cached !== undefined, sizes: comparison };
 });
 
 const comparisonTable = [
@@ -157,12 +173,31 @@ const published = publishCorpus((target) => {
     const directory = new URL(`bwv${bwv}/`, target);
     mkdirSync(directory);
     writeFileSync(new URL("sources.json", directory), manifest);
-    for (const { id, playbackJson, transposedJson, cacheKey } of scores.filter((score) => score.bwv === bwv)) {
+    for (const { id, playbackJson, cacheRecord } of scores.filter((score) => score.bwv === bwv)) {
       writeFileSync(new URL(`${id}.playback.json`, directory), playbackJson);
-      writeFileSync(new URL(`.${id}.transposed.cache`, directory), `${cacheKey} ${sha256(transposedJson)}\n${transposedJson}`);
+      writeFileSync(new URL(`.${id}.transposed.cache`, directory), cacheRecord);
     }
   }
   writeFileSync(new URL("catalog.json", target), `${JSON.stringify({ works: works.map(({ bwv, key }) => ({ bwv, key })) })}\n`);
   writeFileSync(new URL("compression.md", target), comparisonTable);
 });
+
+if (cacheDirectory) {
+  for (const { id, bwv, cacheRecord, cacheHit } of scores) {
+    if (cacheHit) continue;
+    const directory = new URL(`bwv${bwv}/`, cacheDirectory);
+    const file = new URL(`.${id}.transposed.cache`, directory);
+    const pending = new URL(`.${id}-${randomUUID()}.tmp`, directory);
+    mkdirSync(directory, { recursive: true });
+    try {
+      // Share only records from a validated build and never expose partially written bytes.
+      writeFileSync(pending, cacheRecord, { flag: "wx" });
+      renameSync(pending, file);
+    } finally {
+      rmSync(pending, { force: true });
+    }
+  }
+}
+
+console.log(`Transposition search cache: ${scores.filter(({ cacheHit }) => cacheHit).length}/${scores.length} hits`);
 console.log(`Published Brotli report at ${fileURLToPath(new URL("compression.md", published))}`);
