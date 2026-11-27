@@ -16,6 +16,7 @@
     "build": "tsc -p tsconfig.json",
     "build:corpus": "npm run build && node dist/scripts/build-corpus.js",
     "audit:sources": "npm run build && node dist/scripts/audit-sources.js",
+    "audit:voices": "npm run build && node dist/scripts/audit-voices.js",
     "check:corpus": "npm run build && node dist/scripts/check-corpus.js",
     "test": "npm run build && node --test \"dist/test/*.test.js\"",
     "verify": "npm test && node dist/scripts/build-corpus.js --fresh",
