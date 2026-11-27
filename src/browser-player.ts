@@ -104,7 +104,7 @@ export function createBrowserPlayer(
         const names = available.map(({ name }) => name).join(", ");
         throw new RangeError(names
           ? `Unknown voice "${label}" for ${asset.source.id}. Available voices: ${names}.`
-          : `${asset.source.id} has no selectable solo voices.`);
+          : `${asset.source.id} has no selectable voices.`);
       }
       const soloId = voice === undefined ? undefined : voiceId(voice, voices);
       const available = soloId === undefined ? voices : voices.filter(({ id }) => id === soloId);

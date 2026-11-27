@@ -28,7 +28,7 @@ The **Verify corpus** workflow builds and tests the static demo from the verifie
 
 ## Play from a browser app
 
-The locally packed npm preview includes an ESM entry with TypeScript declarations. Install the tarball in your browser app and call `play` from a user interaction.
+The `0.1.3` npm preview includes a browser ESM entry with TypeScript declarations. Install `@mokele-mbembe/js-bach@preview` in your browser app and call `play` from a user interaction.
 
 ```js
 import { play, stop } from "@mokele-mbembe/js-bach";
@@ -43,7 +43,7 @@ document.querySelector("#stop").addEventListener("click", stop);
 
 The first call starts the prelude and downloads its playback data on demand. To hear just the alto of the BWV 846 fugue, call `play("bwv846", { movement: "fugue", voice: "Alto" })`. [Browser API and installed preview guide](docs/npm-preview.md)
 
-The locally built package also exports `getVoices` and `getPerformance` for voice controls and visualization. `play` returns a handle with `setVoiceMuted` for movements with named voices. [Programmable voices](docs/npm-preview.md#programmable-voices)
+The preview also exports `getVoices` and `getPerformance` for voice controls and visualization. `play` returns a handle with `setVoiceMuted` for movements with named voices. [Programmable voices](docs/npm-preview.md#programmable-voices)
 
 ```js
 const scheduled = [];

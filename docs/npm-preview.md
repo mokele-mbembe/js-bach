@@ -35,7 +35,7 @@ Call `play` directly from a user gesture so the browser can start Web Audio. The
 
 ### Programmable voices
 
-The locally built tarball includes two read-only queries. Both work without Web Audio and load only the requested movement. `getVoices` returns the verified musical voice IDs and names for the BWV 846–849 fugues. A solo can use either form, such as `"alto"` or `"Alto"`. `getPerformance` returns `durationSeconds` and note events with `startSeconds`, `endSeconds`, `midiPitch`, `voiceId`, and `scoreVoice`. Times are seconds from the beginning of the full movement, including written repeats and tied durations. `scoreVoice` is the source label at the attack and can appear under different `voiceId` values in different measures. Movements without verified groups return an empty voice list and `null` for each note’s `voiceId`.
+The `0.1.3` preview includes two read-only queries. Both work without Web Audio and load only the requested movement. `getVoices` returns the verified musical voice IDs and names for the BWV 846–849 fugues. A solo can use either form, such as `"alto"` or `"Alto"`. `getPerformance` returns `durationSeconds` and note events with `startSeconds`, `endSeconds`, `midiPitch`, `voiceId`, and `scoreVoice`. Times are seconds from the beginning of the full movement, including written repeats and tied durations. `scoreVoice` is the source label at the attack and can appear under different `voiceId` values in different measures. Movements without verified groups return an empty voice list and `null` for each note’s `voiceId`.
 
 ```js
 import { getVoices, getPerformance, play } from "@mokele-mbembe/js-bach";
