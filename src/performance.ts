@@ -25,7 +25,7 @@ interface NoteSpan {
   voiceId?: string;
 }
 
-type ResolveVoice = (measure: string, scoreVoice: string, note: Readonly<NoteEvent>) => string | undefined;
+export type ResolveVoice = (measure: string, scoreVoice: string, note: Readonly<NoteEvent>) => string | undefined;
 
 function joinTies(score: ScoreIR, resolveVoice?: ResolveVoice): NoteSpan[] {
   const segments = score.measures.flatMap((measure) => measure.events.flatMap((event) =>

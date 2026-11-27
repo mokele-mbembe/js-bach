@@ -2,13 +2,12 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { unzipSync } from "fflate";
 import { toPerformance } from "../src/performance.js";
-import { describeVoices } from "../src/playback-asset.js";
 import { midiPitch, type ScoreIR } from "../src/score-ir.js";
-import { movements, performanceForMovement, readMovementScore } from "./corpus.js";
+import { movements, performanceForMovement, readMovementScore, resolveVoiceForMovement } from "./corpus.js";
 import { downloadSource, verifySourceBytes } from "./source-download.js";
 import { auditVoiceAssignments, type ReferenceVoiceNote, type ScoreVoiceNote, type VoiceAudit } from "./voice-audit-matcher.js";
 import { readLilyPondVoices } from "./voice-reference-lilypond.js";
@@ -99,14 +98,17 @@ async function loadEngraving({ file, download, sha256, archiveMember, memberSha2
   }
 }
 
-function scoreNotes(score: ScoreIR, ticksPerQuarter: number): ScoreVoiceNote[] {
+function* writtenSegments(score: ScoreIR, ticksPerQuarter: number) {
   const scale = ticksPerQuarter / score.ticksPerQuarter;
-  return score.measures.flatMap(({ number, startTick, events }) => events.flatMap((event) => {
-    if (event.kind !== "note" || event.grace || event.durationTicks <= 0) return [];
-    return [{ measure: number, scoreVoice: event.voice, midiPitch: midiPitch(event.pitch),
-      tick: (startTick + event.offsetTicks) * scale, durationTicks: event.durationTicks * scale,
-      tieStart: event.tieStart, tieStop: event.tieStop }];
-  }));
+  for (const { number, startTick, events } of score.measures) {
+    for (const event of events) {
+      if (event.kind !== "note" || event.grace || event.durationTicks <= 0) continue;
+      const note: ScoreVoiceNote = { measure: number, scoreVoice: event.voice, midiPitch: midiPitch(event.pitch),
+        tick: (startTick + event.offsetTicks) * scale, durationTicks: event.durationTicks * scale,
+        tieStart: event.tieStart, tieStop: event.tieStop };
+      yield { note, event };
+    }
+  }
 }
 
 function checkPlayback(score: ScoreIR, mapping: Parameters<typeof performanceForMovement>[1]) {
@@ -159,7 +161,8 @@ function markdown(id: string, report: Awaited<ReturnType<typeof auditMovement>>)
     ...(checks.manifest ? [
       `Existing manifest: ${checks.manifest.checked} assigned segments checked, ${checks.manifest.conflicts.length} disagreements. Per-voice written spans and ties: **${checks.manifest.segmentCountsMatch ? "matched" : "differ"}** (${checks.manifest.scoreSegments} score segments and ${checks.manifest.referenceSegments} reference segments).`,
       `Existing manifest playback: **${checks.manifest.playback.status}** (${checks.manifest.playback.status === "passed" ? `${checks.manifest.playback.performedNotes} performed notes` : checks.manifest.playback.reason}).`,
-    ] : []), "",
+    ] : []),
+    ...(checks.manifestError ? [`Existing manifest check failed. ${checks.manifestError}`] : []), "",
     "## Score labels and matched musical voices", "",
     "| Score voice | Musical voices and matched segments | Unassigned score segments |", "| --- | --- | ---: |",
     ...report.scoreVoices.map(({ scoreVoice, voices, unassigned }) =>
@@ -197,7 +200,7 @@ async function auditMovement(id: string, reference: VoiceReference) {
   const engraving = readLilyPondVoices(new TextDecoder("utf-8", { fatal: true }).decode(bytes), reference.voices);
   const ticksPerQuarter = commonGrid(score.ticksPerQuarter, engraving.ticksPerQuarter);
   const scale = ticksPerQuarter / engraving.ticksPerQuarter;
-  const written = scoreNotes(score, ticksPerQuarter);
+  const written = Array.from(writtenSegments(score, ticksPerQuarter), ({ note }) => note);
   const referenceNotes = engraving.notes.map((note) => ({
     ...note, tick: note.tick * scale, durationTicks: note.durationTicks * scale,
   }));
@@ -225,7 +228,15 @@ async function auditMovement(id: string, reference: VoiceReference) {
       return [{ measure: number, scoreVoice, sharedOnsets, notes: offsets }];
     });
   });
-  const manifest = movement.voices?.length ? checkManifest(movement, score, written, referenceNotes, audit) : undefined;
+  let manifest: ManifestCheck | undefined;
+  let manifestError: string | undefined;
+  if (movement.voices?.length) {
+    try {
+      manifest = checkManifest(movement, score, ticksPerQuarter, referenceNotes, audit);
+    } catch (error) {
+      manifestError = error instanceof Error ? error.message : String(error);
+    }
+  }
   return {
     id, ticksPerQuarter, measureCount: score.measures.length, audit, withinMeasure, scoreVoices,
     measureCoverage: withinMeasure.length || audit.scope === "within-measure" ? "insufficient" : audit.scope === "incomplete" ? "undetermined" : "sufficient",
@@ -233,27 +244,40 @@ async function auditMovement(id: string, reference: VoiceReference) {
     reference: { ...reference, inputSha256, engravingSha256 },
     scoreOnly: audit.differences.reduce((sum, row) => sum + Math.max(0, row.scoreNotes.length - row.referenceNotes.length), 0),
     referenceOnly: audit.differences.reduce((sum, row) => sum + Math.max(0, row.referenceNotes.length - row.scoreNotes.length), 0),
-    checks: { compiler: compilerCheck(score, audit, id), manifest },
+    checks: { compiler: compilerCheck(score, audit, id), manifest, manifestError },
   };
 }
 
-function checkManifest(
-  movement: (typeof movements)[number], score: ScoreIR, written: readonly ScoreVoiceNote[],
+interface ManifestCheck {
+  checked: number;
+  conflicts: VoiceAudit["assignments"];
+  scoreSegments: number;
+  referenceSegments: number;
+  segmentCountsMatch: boolean;
+  playback: ReturnType<typeof checkPlayback>;
+}
+
+export function checkManifest(
+  movement: Parameters<typeof resolveVoiceForMovement>[1], score: ScoreIR, ticksPerQuarter: number,
   reference: readonly ReferenceVoiceNote[], audit: VoiceAudit,
-) {
-  const { byScoreVoice } = describeVoices(movement.voices);
-  function manifestVoice({ measure, scoreVoice }: ScoreVoiceNote) {
-    const override = movement.voiceOverrides?.find((rule) => rule.scoreVoice === scoreVoice && rule.measures.includes(measure));
-    return override?.voiceId ?? byScoreVoice.get(scoreVoice);
-  }
+): ManifestCheck {
+  const resolveVoice = resolveVoiceForMovement(score, movement);
+  const voiceBySegment = new Map<string, string | undefined>();
+  const scoreSegmentKey = ({ measure, scoreVoice, tick, durationTicks, midiPitch, tieStart, tieStop }: ScoreVoiceNote) =>
+    JSON.stringify([measure, scoreVoice, tick, durationTicks, midiPitch, tieStart, tieStop]);
   const segmentKey = ({ tick, durationTicks, midiPitch, tieStart, tieStop }: ScoreVoiceNote | ReferenceVoiceNote, voiceId?: string) =>
     `${voiceId ?? ""}:${tick}:${durationTicks}:${midiPitch}:${tieStart}:${tieStop}`;
   // Verify the existing manifest as a hypothesis without feeding it to the matcher.
-  const scoreSegments = written.map((note) => segmentKey(note, manifestVoice(note))).sort();
+  const scoreSegments = Array.from(writtenSegments(score, ticksPerQuarter), ({ note, event }) => {
+    // Override offsets are in the score's native grid, so resolve using the original event.
+    const voiceId = resolveVoice?.(note.measure, note.scoreVoice, event);
+    voiceBySegment.set(scoreSegmentKey(note), voiceId);
+    return segmentKey(note, voiceId);
+  }).sort();
   const referenceSegments = reference.map((note) => segmentKey(note, note.voiceId)).sort();
   return {
     checked: audit.assignments.length,
-    conflicts: audit.assignments.filter((note) => manifestVoice(note) !== note.voiceId),
+    conflicts: audit.assignments.filter((note) => voiceBySegment.get(scoreSegmentKey(note)) !== note.voiceId),
     scoreSegments: scoreSegments.length,
     referenceSegments: referenceSegments.length,
     segmentCountsMatch: scoreSegments.length === referenceSegments.length &&
@@ -262,28 +286,30 @@ function checkManifest(
   };
 }
 
-const usage = "Usage: npm run audit:voices -- <movement-id> [--reference <config.json>]";
-try {
-  const { values, positionals } = parseArgs({ allowPositionals: true, options: { reference: { type: "string" }, help: { type: "boolean" } } });
-  if (values.help) console.log(usage);
-  else {
-    assert.equal(positionals.length, 1, usage);
-    const [id] = positionals;
-    const report = await auditMovement(id, await getReference(id, values.reference));
-    const output = fileURLToPath(new URL("../voice-audit/", import.meta.url));
-    await mkdir(output, { recursive: true });
-    const directory = await mkdtemp(join(output, `${id}-`));
-    try {
-      await writeFile(join(directory, "voice-audit.json"), `${JSON.stringify(report, null, 2)}\n`);
-      await writeFile(join(directory, "voice-audit.md"), markdown(id, report));
-    } catch (error) {
-      await rm(directory, { recursive: true, force: true });
-      throw error;
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  const usage = "Usage: npm run audit:voices -- <movement-id> [--reference <config.json>]";
+  try {
+    const { values, positionals } = parseArgs({ allowPositionals: true, options: { reference: { type: "string" }, help: { type: "boolean" } } });
+    if (values.help) console.log(usage);
+    else {
+      assert.equal(positionals.length, 1, usage);
+      const [id] = positionals;
+      const report = await auditMovement(id, await getReference(id, values.reference));
+      const output = fileURLToPath(new URL("../voice-audit/", import.meta.url));
+      await mkdir(output, { recursive: true });
+      const directory = await mkdtemp(join(output, `${id}-`));
+      try {
+        await writeFile(join(directory, "voice-audit.json"), `${JSON.stringify(report, null, 2)}\n`);
+        await writeFile(join(directory, "voice-audit.md"), markdown(id, report));
+      } catch (error) {
+        await rm(directory, { recursive: true, force: true });
+        throw error;
+      }
+      console.log(`${id} — ${report.audit.assignments.length}/${report.audit.scoreCount} assigned, ${report.withinMeasure.length} within-measure conflicts`);
+      console.log(join(directory, "voice-audit.md"));
     }
-    console.log(`${id} — ${report.audit.assignments.length}/${report.audit.scoreCount} assigned, ${report.withinMeasure.length} within-measure conflicts`);
-    console.log(join(directory, "voice-audit.md"));
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
   }
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
 }

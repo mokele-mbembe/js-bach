@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { importMxl } from "../src/import-mxl.js";
-import { toPerformance, type Performance } from "../src/performance.js";
+import { toPerformance, type Performance, type ResolveVoice } from "../src/performance.js";
 import { describeVoices } from "../src/playback-asset.js";
 import { midiPitch, type Attack, type ScoreIR } from "../src/score-ir.js";
 import { sliceScore } from "./score-slice.js";
@@ -119,14 +119,16 @@ function noteOverrideKey(measure: string, offsetTicks: number, scoreVoice: strin
   return JSON.stringify([measure, offsetTicks, scoreVoice, pitch]);
 }
 
-export function performanceForMovement(
+type MovementVoiceMapping = Pick<MovementSource, "id" | "voices" | "voiceOverrides" | "noteOverrides">;
+
+export function resolveVoiceForMovement(
   score: ScoreIR,
-  { id, voices: groups = [], voiceOverrides = [], noteOverrides = [] }: Pick<MovementSource, "id" | "voices" | "voiceOverrides" | "noteOverrides">,
-): Performance {
+  { id, voices: groups = [], voiceOverrides = [], noteOverrides = [] }: MovementVoiceMapping,
+): ResolveVoice | undefined {
   if (groups.length === 0) {
     assert.equal(voiceOverrides.length, 0, `${id} has voice overrides without voice groups`);
     assert.equal(noteOverrides.length, 0, `${id} has note overrides without voice groups`);
-    return toPerformance(score);
+    return undefined;
   }
 
   const { voices, byScoreVoice } = describeVoices(groups);
@@ -163,12 +165,16 @@ export function performanceForMovement(
     noteVoices.set(key, voiceId);
   }
 
-  return toPerformance(score, (measure, scoreVoice, note) => {
+  return (measure, scoreVoice, note) => {
     const exact = noteVoices.size > 0 && note.durationTicks > 0
       ? noteVoices.get(noteOverrideKey(measure, note.offsetTicks, scoreVoice, midiPitch(note.pitch)))
       : undefined;
     const voiceId = exact ?? overrides.get(measure)?.get(scoreVoice) ?? byScoreVoice.get(scoreVoice);
     assert.ok(voiceId, `${id} has unassigned score voice ${scoreVoice} in measure ${measure}`);
     return voiceId;
-  });
+  };
+}
+
+export function performanceForMovement(score: ScoreIR, mapping: MovementVoiceMapping): Performance {
+  return toPerformance(score, resolveVoiceForMovement(score, mapping));
 }
