@@ -100,7 +100,7 @@ try {
   ].join("\n"));
   writeFileSync(join(stage, browserTypes), [
     `import type { BrowserPlayer } from "./src/browser-player.js";`,
-    `export type { BrowserPlayer, MovementOptions, PlayOptions, PerformanceEvent, PerformanceTimeline, Voice } from "./src/browser-player.js";`,
+    `export type { BrowserPlayer, MovementOptions, PlayOptions, ScheduledNote, PerformanceEvent, PerformanceTimeline, Voice } from "./src/browser-player.js";`,
     `export type { Playback, MixedPlayback } from "./src/oscillator-player.js";`,
     `export declare const play: BrowserPlayer["play"];`,
     `export declare const stop: BrowserPlayer["stop"];`,

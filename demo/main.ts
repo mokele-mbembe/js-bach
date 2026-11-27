@@ -248,8 +248,7 @@ play.addEventListener("click", async () => {
       setTransport(false, `Finished ${label}`);
     };
     const mixer = polyphonyPanel.hidden ? undefined : polyphony;
-    playback = playPerformance(audio, performance, onEnded, mixer?.voiceIds ?? []);
-    for (const id of mixer?.muted ?? []) playback.setVoiceMuted(id, true);
+    playback = playPerformance(audio, performance, onEnded, mixer?.voiceIds ?? [], { muted: mixer && [...mixer.muted] });
     setTransport(true, `Playing ${label}`);
     updateProgress();
   } catch (error) {

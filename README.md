@@ -45,6 +45,17 @@ The first call starts the prelude and downloads its playback data on demand. To 
 
 The locally built package also exports `getVoices` and `getPerformance` for voice controls and visualization. `play` returns a handle with `setVoiceMuted` for movements with named voices. [Programmable voices](docs/npm-preview.md#programmable-voices)
 
+```js
+const scheduled = [];
+const playback = await play("bwv846", {
+  movement: "fugue",
+  muted: ["Alto"],
+  onNote: (note) => scheduled.push(note),
+});
+```
+
+Run this from a user interaction. `onNote` runs up to 150 ms before the oscillator starts, including for muted voices. Scheduling continues while a callback promise is pending. A thrown error or rejected promise stops that playback. Compare `startSeconds` and `endSeconds` with `playback.position()` to highlight the notes as they sound. `audioStartTime` and `audioEndTime` give the Web Audio times for scheduling against the same audio clock. [Callback, mute, and solo semantics](docs/npm-preview.md#programmable-voices)
+
 ## Pack the npm preview
 
 Run `npm run pack:preview` to build and write the installable tarball to `dist/npm/`. The tarball includes the player, one generated corpus, the corresponding source, and per-movement license notices. After installing the tarball, run `npm exec -- js-bach` from the installation directory. [Installed preview guide](docs/npm-preview.md)

@@ -44,17 +44,32 @@ const fugue = { movement: "fugue" };
 const voices = await getVoices("bwv846", fugue);
 const { notes, durationSeconds } = await getPerformance("bwv846", fugue);
 const alto = voices.find(({ id }) => id === "alto");
+let scheduled = [];
 
 let playback;
 document.querySelector("#bach-play").addEventListener("click", async () => {
-  playback = await play("bwv846", fugue);
+  scheduled = [];
+  playback = await play("bwv846", {
+    ...fugue,
+    muted: ["Alto"],
+    onNote(note) {
+      scheduled.push(note);
+      // On the same audio clock, a synth can use note.audioStartTime and note.audioEndTime.
+    },
+  });
 });
 document.querySelector("#mute-alto").addEventListener("change", (event) => {
   if (alto) playback?.setVoiceMuted(alto.id, event.currentTarget.checked);
 });
 ```
 
-For a piano roll, use `notes` and `durationSeconds` to draw the score and `playback.position()` for the playhead. Start playback with all voices to share that time axis. Muting a voice changes its gain while the transport continues, including during sustained notes.
+Draw a piano roll from `notes` and `durationSeconds`. To highlight scheduled notes when they sound, compare `playback.position()` with their `startSeconds` and `endSeconds`. Whole-movement playback uses the `getPerformance()` timeline. Solo playback rebases the selected voice to its first entrance.
+
+`onNote` receives a `ScheduledNote` when Web Audio schedules the oscillator, up to 150 ms ahead. `audioStartTime` and `audioEndTime` are seconds on the player's `AudioContext` clock. Use those times directly with the same audio clock, or translate them before passing them to a synth on a different clock. The callback starts after `play()` returns its handle. Calling `stop()` in the callback stops further callbacks immediately.
+
+Scheduling continues while a callback promise is pending. A synchronous throw or a rejected callback promise stops the playback that invoked the callback and surfaces as an uncaught browser error. A rejection from an earlier playback leaves its replacement playing.
+
+`muted` starts the listed voice buses at zero gain. Muted voices still schedule oscillators and emit `onNote`, so restoring a sustained voice keeps its original timing. `voice`, `muted`, and `setVoiceMuted` accept either the voice ID or its display name. During a solo, the initial and live mute settings apply to the selected voice. Other labels raise `RangeError`.
 
 ## Rebuild and licenses
 

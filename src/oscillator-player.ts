@@ -1,4 +1,5 @@
 import type { Performance } from "./performance.js";
+import type { PerformanceEvent } from "./playback-asset.js";
 
 const LOOKAHEAD_SECONDS = 0.15;
 const UPDATE_MS = 25;
@@ -11,8 +12,21 @@ export interface Playback {
 }
 
 export interface MixedPlayback extends Playback {
-  /** Change a voice's gain without changing its placement on the playback timeline. */
-  setVoiceMuted(voiceId: string, muted: boolean): void;
+  /** Change a voice's gain by ID while the timeline continues. Browser playback also accepts its display name. */
+  setVoiceMuted(voice: string, muted: boolean): void;
+}
+
+/** A note on the selected performance's timeline with its scheduled AudioContext times. */
+export interface ScheduledNote extends PerformanceEvent {
+  readonly audioStartTime: number;
+  readonly audioEndTime: number;
+}
+
+export interface PlayOptions {
+  /** Voice IDs whose gains start at zero. Their notes are still scheduled. */
+  muted?: readonly string[];
+  /** Called within the 150 ms lookahead, including for muted notes. A rejected callback stops playback. */
+  onNote?: (note: ScheduledNote) => void;
 }
 
 /** Schedules a performance on an already running AudioContext. */
@@ -22,22 +36,32 @@ export function playPerformance(
   performance: Performance,
   onEnded: () => void,
   voiceIds: readonly string[],
+  options?: PlayOptions,
 ): MixedPlayback;
 export function playPerformance(
   context: AudioContext,
   performance: Performance,
   onEnded: () => void,
   voiceIds?: readonly string[],
+  { muted, onNote }: PlayOptions = {},
 ): Playback | MixedPlayback {
+  const ids = new Set(voiceIds);
+  const initiallyMuted = new Set(muted);
+  for (const id of initiallyMuted) {
+    if (!ids.has(id)) throw new RangeError(`Unknown playback voice "${id}".`);
+  }
+
   const master = context.createGain();
   master.gain.value = 0.6;
   master.connect(context.destination);
 
   const voiceGains = new Map<string, { node: GainNode; muted: boolean }>();
-  for (const id of new Set(voiceIds)) {
+  for (const id of ids) {
     const node = context.createGain();
+    const isMuted = initiallyMuted.has(id);
+    node.gain.value = isMuted ? 0 : 1;
     node.connect(master);
-    voiceGains.set(id, { node, muted: false });
+    voiceGains.set(id, { node, muted: isMuted });
   }
 
   const start = context.currentTime + 0.05;
@@ -102,26 +126,43 @@ export function playPerformance(
   }
 
   function pump(): void {
-    const now = context.currentTime;
-    while (cursor < performance.notes.length) {
-      const note = performance.notes[cursor];
-      if (start + note.startSeconds >= now + LOOKAHEAD_SECONDS) break;
-      const end = start + note.endSeconds;
-      if (end > now) {
-        const output = note.voiceId === undefined ? master : voiceGains.get(note.voiceId)?.node ?? master;
-        schedule(note.midiPitch, Math.max(now, start + note.startSeconds), end, output);
+    try {
+      const deadline = context.currentTime + LOOKAHEAD_SECONDS;
+      while (!stopped && cursor < performance.notes.length) {
+        const { midiPitch, startSeconds, endSeconds, voice, voiceId } = performance.notes[cursor];
+        const onset = start + startSeconds;
+        if (onset >= deadline) break;
+        cursor++;
+        const now = context.currentTime;
+        const end = start + endSeconds;
+        if (end <= now) continue;
+        const output = voiceId === undefined ? master : voiceGains.get(voiceId)?.node ?? master;
+        const audioStartTime = Math.max(now, onset);
+        schedule(midiPitch, audioStartTime, end, output);
+        const result: unknown = onNote?.({ midiPitch, startSeconds, endSeconds, voiceId: voiceId ?? null, scoreVoice: voice,
+          audioStartTime, audioEndTime: end });
+        if (result !== null && (typeof result === "object" || typeof result === "function")) {
+          // Observe returned promises without pausing the lookahead loop.
+          void Promise.resolve(result).catch((error: unknown) => {
+            stop();
+            queueMicrotask(() => { throw error; });
+          });
+        }
       }
-      cursor++;
-    }
 
-    if (now >= start + performance.durationSeconds) {
+      if (!stopped && context.currentTime >= start + performance.durationSeconds) {
+        stop();
+        onEnded();
+      }
+    } catch (error) {
       stop();
-      onEnded();
+      throw error;
     }
   }
 
   const timer = setInterval(pump, UPDATE_MS);
-  pump();
+  // Let callers receive the handle before any callback can stop playback.
+  if (!onNote) pump();
   const playback = {
     position: () => Math.max(0, Math.min(context.currentTime - start, performance.durationSeconds)),
     stop,
