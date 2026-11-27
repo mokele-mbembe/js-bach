@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { importMxl } from "../src/import-mxl.js";
+import { toPerformance, type Performance } from "../src/performance.js";
+import { describeVoices } from "../src/playback-asset.js";
 import type { Attack, ScoreIR } from "../src/score-ir.js";
 import { sliceScore } from "./score-slice.js";
 import type { MidiReferenceTiming } from "./source-attacks.js";
@@ -21,14 +23,21 @@ export interface VoiceGroup {
   ids: string[];
 }
 
+interface VoiceOverride {
+  scoreVoice: string;
+  measures: string[];
+  voiceId: string;
+}
+
 interface MovementSource {
   id: string;
   kind: "prelude" | "fugue";
   title: string;
   key?: string;
   voices?: VoiceGroup[];
+  voiceOverrides?: VoiceOverride[];
   score: CorpusFile & { upstream?: string; measureRange?: [start: number, end: number] };
-  referenceMidi: CorpusFile & MidiReferenceTiming & { typesetter: string };
+  referenceMidi: CorpusFile & MidiReferenceTiming & { typesetter: string; engraving?: string };
   expected: {
     measures: number;
     attacks: number;
@@ -95,4 +104,40 @@ export function readMovementScore({ bwv, id, title, composer, score: input }: (t
     title: input.measureRange ? title : score.title ?? title,
     composer: score.composer ?? composer,
   };
+}
+
+export function performanceForMovement(
+  score: ScoreIR,
+  { id, voices: groups = [], voiceOverrides = [] }: Pick<MovementSource, "id" | "voices" | "voiceOverrides">,
+): Performance {
+  if (groups.length === 0) {
+    assert.equal(voiceOverrides.length, 0, `${id} has voice overrides without voice groups`);
+    return toPerformance(score);
+  }
+
+  const { voices, byScoreVoice } = describeVoices(groups);
+  const voiceIds = new Set(voices.map(({ id }) => id));
+  assert.equal(voiceIds.size, groups.length, `${id} has duplicate musical voice IDs`);
+  assert.equal(byScoreVoice.size, groups.flatMap(({ ids }) => ids).length, `${id} has duplicate score voice IDs`);
+
+  const overrides = new Map<string, Map<string, string>>();
+  for (const { scoreVoice, measures, voiceId } of voiceOverrides) {
+    assert.ok(voiceIds.has(voiceId), `${id} has unknown musical voice ${voiceId}`);
+    assert.ok(measures.length > 0, `${id} has an empty voice override for ${scoreVoice}`);
+    for (const number of measures) {
+      assert.ok(score.measures.some((measure) => measure.number === number && measure.events.some((event) =>
+        event.kind === "note" && !event.grace && event.durationTicks > 0 && event.voice === scoreVoice,
+      )), `${id} has no metered notes for score voice ${scoreVoice} in measure ${number}`);
+      const scoped = overrides.get(number) ?? new Map<string, string>();
+      assert.ok(!scoped.has(scoreVoice), `${id} has duplicate score voice ${scoreVoice} overrides in measure ${number}`);
+      scoped.set(scoreVoice, voiceId);
+      overrides.set(number, scoped);
+    }
+  }
+
+  return toPerformance(score, (measure, scoreVoice) => {
+    const voiceId = overrides.get(measure)?.get(scoreVoice) ?? byScoreVoice.get(scoreVoice);
+    assert.ok(voiceId, `${id} has unassigned score voice ${scoreVoice} in measure ${measure}`);
+    return voiceId;
+  });
 }

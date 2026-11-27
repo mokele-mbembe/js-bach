@@ -138,7 +138,7 @@ function assertGeneration(directory: string, manifest: string): void {
     assert.match(playback.source.score.changes, /Converted from .* to js-bach playback data/);
     const original = importMxl(readFileSync(new URL(`../../corpus/${work}/${score.file}`, import.meta.url)));
     const scoreIR = score.measureRange ? sliceScore(original, score.measureRange, id) : original;
-    assert.deepEqual(decodePlayback(playback.performance), toPerformance(scoreIR));
+    assert.deepEqual(decodePlayback(playback), toPerformance(scoreIR));
     const { eventStream, rhythmEncoding, transposedEncoding } = playback.sizes;
     assert.ok(report.includes(`| BWV ${source.bwv} ${title} | ${eventStream.brotliBytes} | ${rhythmEncoding.brotliBytes} | ${transposedEncoding.brotliBytes} |`));
   }

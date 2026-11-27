@@ -96,6 +96,8 @@ async function checkPages(url: URL, local: boolean) {
     await stop(page);
 
     await page.getByText("Fugue", { exact: true }).click();
+    await page.locator("#polyphony canvas").waitFor();
+    assert.equal(await page.locator("#fugue-entrances li").count(), 4);
     await page.getByText("Bass", { exact: true }).click();
     assert.equal(await play(page, "Fugue · Bass"), 48, "The BWV 846 fugue bass should begin on MIDI pitch 48");
     await stop(page);

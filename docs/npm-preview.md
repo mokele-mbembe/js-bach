@@ -31,7 +31,30 @@ document.querySelector("#bach-play").addEventListener("click", () => {
 document.querySelector("#bach-stop").addEventListener("click", stop);
 ```
 
-Call `play` directly from a user gesture so the browser can start Web Audio. The default movement is the prelude. Pass `{ movement: "fugue" }` for the fugue or `{ movement: "fugue", voice: "Alto" }` to solo the alto in BWV 846. Voice names are available for the BWV 846 and 847 fugues. `play` resolves to a handle with `position()` in seconds and `stop()` for that playback. Starting another movement replaces the current playback. Calling the exported `stop()` also cancels pending playback. If a start is canceled or superseded, its promise rejects with `AbortError`.
+Call `play` directly from a user gesture so the browser can start Web Audio. The default movement is the prelude. Pass `{ movement: "fugue" }` for the fugue or `{ movement: "fugue", voice: "Alto" }` to solo the alto in BWV 846. `play` resolves to a handle with `position()` in seconds and `stop()` for that playback. Starting another movement replaces the current playback. Calling the exported `stop()` also cancels pending playback. If a start is canceled or superseded, its promise rejects with `AbortError`.
+
+### Programmable voices
+
+The locally built tarball includes two read-only queries. Both work without Web Audio and load only the requested movement. `getVoices` returns the verified musical voice IDs and names for the BWV 846–848 fugues. A solo can use either form, such as `"alto"` or `"Alto"`. `getPerformance` returns `durationSeconds` and note events with `startSeconds`, `endSeconds`, `midiPitch`, `voiceId`, and `scoreVoice`. Times are seconds from the beginning of the full movement, including written repeats and tied durations. `scoreVoice` is the source label at the attack and can appear under different `voiceId` values in different measures. Movements without verified groups return an empty voice list and `null` for each note’s `voiceId`.
+
+```js
+import { getVoices, getPerformance, play } from "@mokele-mbembe/js-bach";
+
+const fugue = { movement: "fugue" };
+const voices = await getVoices("bwv846", fugue);
+const { notes, durationSeconds } = await getPerformance("bwv846", fugue);
+const alto = voices.find(({ id }) => id === "alto");
+
+let playback;
+document.querySelector("#bach-play").addEventListener("click", async () => {
+  playback = await play("bwv846", fugue);
+});
+document.querySelector("#mute-alto").addEventListener("change", (event) => {
+  if (alto) playback?.setVoiceMuted(alto.id, event.currentTarget.checked);
+});
+```
+
+For a piano roll, use `notes` and `durationSeconds` to draw the score and `playback.position()` for the playhead. Start playback with all voices to share that time axis. Muting a voice changes its gain while the transport continues, including during sustained notes.
 
 ## Rebuild and licenses
 

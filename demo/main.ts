@@ -1,6 +1,7 @@
-import { playPerformance, type Playback } from "../src/oscillator-player.js";
-import { soloVoice, type Performance } from "../src/performance.js";
-import { decodePlayback, type PlaybackAsset } from "../src/playback-asset.js";
+import { playPerformance, type MixedPlayback } from "../src/oscillator-player.js";
+import type { Performance } from "../src/performance.js";
+import { decodePlayback, describeVoices, soloMusicalVoice, type PlaybackAsset } from "../src/playback-asset.js";
+import type { createPolyphony } from "./polyphony.js";
 
 const corpus = new URL("../corpus/", import.meta.url);
 
@@ -36,6 +37,7 @@ const fragmentSummary = element("#fragment-summary");
 const eventBytes = element("#event-bytes");
 const templateBytes = element("#template-bytes");
 const fragmentBytes = element("#fragment-bytes");
+const polyphonyPanel = element("#polyphony");
 
 const movements = new Map<string, Movement>();
 let pendingMovement: { id: string; controller: AbortController; promise: Promise<Movement> } | undefined;
@@ -43,7 +45,8 @@ let selected: Movement | undefined;
 let selectionAttempt = 0;
 let current: { performance: Performance; label: string } | undefined;
 let audio: AudioContext | undefined;
-let playback: Playback | undefined;
+let playback: MixedPlayback | undefined;
+let polyphony: ReturnType<typeof createPolyphony> | undefined;
 let attempt = 0;
 let frame = 0;
 
@@ -55,6 +58,7 @@ function formatTime(seconds: number): string {
 function showPosition(position: number): void {
   progress.value = position;
   elapsed.textContent = formatTime(position);
+  if (!polyphonyPanel.hidden) polyphony?.setPosition(position);
 }
 
 function setTransport(isPlaying: boolean, message: string): void {
@@ -120,10 +124,11 @@ function showRhythmTemplates({ templateCount, measures }: PlaybackAsset["analysi
 
 function showTransposedFragments(
   { ticksPerQuarter, measures, fragments }: PlaybackAsset["analysis"]["transposed"],
-  voiceGroups: NonNullable<PlaybackAsset["source"]["voices"]>,
+  { voices: groups, scopedScoreVoices }: PlaybackAsset["source"],
 ): void {
   const count = fragments.reduce((sum, [, , occurrences]) => sum + occurrences.length, 0);
-  const voiceNames = new Map(voiceGroups.flatMap(({ name, ids }) => ids.map((id) => [id, name] as const)));
+  const voiceNames = new Map(groups?.flatMap(({ name, ids }) => ids.map((id) => [id, name] as const)));
+  for (const scoreVoice of scopedScoreVoices ?? []) voiceNames.delete(scoreVoice);
   fragmentSummary.textContent = count > 0
     ? `${count} occurrences of ${fragments.length} shared fragments. Shifts are measured from the first occurrence shown for each fragment.`
     : "The fragment search kept the ordinary event stream.";
@@ -147,7 +152,7 @@ function showTransposedFragments(
       const last = containingMeasure(start + length - 1);
       if (!first || !last) throw new Error(`Missing measure for fragment at tick ${start}`);
       const location = first === last ? `m. ${first[0]}` : `mm. ${first[0]}–${last[0]}`;
-      const part = voiceNames.get(voice) ?? `Voice ${voice}`;
+      const part = voiceNames.get(voice) ?? `Score voice ${voice}`;
       const beat = 1 + (start - first[1]) / ticksPerQuarter;
       const shift = pitch - originPitch;
       const marker = document.createElement("li");
@@ -165,7 +170,7 @@ function showTransposedFragments(
 
 function showEncoding({ analysis, sizes, source }: PlaybackAsset): void {
   showRhythmTemplates(analysis.rhythm);
-  showTransposedFragments(analysis.transposed, source.voices ?? []);
+  showTransposedFragments(analysis.transposed, source);
   eventBytes.textContent = `${sizes.eventStream.brotliBytes.toLocaleString("en-US")} B`;
   templateBytes.textContent = `${sizes.rhythmEncoding.brotliBytes.toLocaleString("en-US")} B`;
   fragmentBytes.textContent = `${sizes.transposedEncoding.brotliBytes.toLocaleString("en-US")} B`;
@@ -207,12 +212,14 @@ function updateVoice(): void {
   stopPlayback();
   const { source } = selected.asset;
   const voice = element<HTMLInputElement>('input[name="voice"]:checked').value;
-  const group = source.voices?.find(({ name }) => name === voice);
+  const { voices: groups } = describeVoices(source.voices);
+  const group = groups.find(({ name }) => name === voice);
   const label = source.kind === "fugue" ? "Fugue" : "Prelude";
   current = {
-    performance: group ? soloVoice(selected.performance, group.ids) : selected.performance,
+    performance: group ? soloMusicalVoice(selected.performance, group.id) : selected.performance,
     label: group ? `${label} · ${group.name}` : label,
   };
+  polyphony?.setVisible(groups.length > 0 && !group);
   progress.max = current.performance.durationSeconds;
   duration.textContent = formatTime(current.performance.durationSeconds);
   setTransport(false, "Ready");
@@ -234,12 +241,15 @@ play.addEventListener("click", async () => {
     audio ??= new AudioContext();
     await audio.resume();
     if (request !== attempt) return;
-    playback = playPerformance(audio, performance, () => {
+    const onEnded = () => {
       playback = undefined;
       cancelAnimationFrame(frame);
       showPosition(performance.durationSeconds);
       setTransport(false, `Finished ${label}`);
-    });
+    };
+    const mixer = polyphonyPanel.hidden ? undefined : polyphony;
+    playback = playPerformance(audio, performance, onEnded, mixer?.voiceIds ?? []);
+    for (const id of mixer?.muted ?? []) playback.setVoiceMuted(id, true);
     setTransport(true, `Playing ${label}`);
     updateProgress();
   } catch (error) {
@@ -283,7 +293,7 @@ async function fetchMovement(bwv: string, id: string): Promise<Movement> {
   const promise = fetchJson<PlaybackAsset>(`bwv${bwv}/${id}.playback.json`, controller.signal).then((asset) => {
     controller.signal.throwIfAborted();
     if (asset.source.id !== id) throw new Error(`Unexpected score for ${id}`);
-    const movement = { asset, performance: decodePlayback(asset.performance) };
+    const movement = { asset, performance: decodePlayback(asset) };
     movements.set(id, movement);
     return movement;
   }).finally(() => {
@@ -305,6 +315,7 @@ async function loadSelection(): Promise<void> {
   voices.hidden = true;
   voices.disabled = true;
   encodingPanel.hidden = true;
+  polyphony?.setVisible(false);
   catalogue.textContent = `BWV ${bwv}`;
   credits.replaceChildren();
   duration.textContent = formatTime(0);
@@ -312,7 +323,18 @@ async function loadSelection(): Promise<void> {
   setTransport(false, `Loading BWV ${bwv} ${kind}…`);
   try {
     const movement = await fetchMovement(bwv, id);
-    if (request === selectionAttempt) showMovement(movement);
+    if (request !== selectionAttempt) return;
+    const hasVoices = Boolean(movement.asset.source.voices?.length);
+    if (hasVoices) {
+      if (!polyphony) {
+        const roll = await import("./polyphony.js").catch(() => undefined);
+        if (request !== selectionAttempt) return;
+        polyphony = roll?.createPolyphony(polyphonyPanel, (id, muted) => playback?.setVoiceMuted(id, muted));
+      }
+      polyphony?.show(movement.performance, movement.asset);
+    }
+    showMovement(movement);
+    if (hasVoices && !polyphony) setTransport(false, "Ready. Piano roll unavailable.");
   } catch (error) {
     if (request !== selectionAttempt) return;
     movements.delete(id);
