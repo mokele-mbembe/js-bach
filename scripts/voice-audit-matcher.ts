@@ -4,18 +4,23 @@ interface WrittenSpan {
   midiPitch: number;
 }
 
-export interface ScoreVoiceNote extends WrittenSpan {
+interface WrittenNote extends WrittenSpan {
+  tieStart: boolean;
+  tieStop: boolean;
+}
+
+export interface ScoreVoiceNote extends WrittenNote {
   scoreVoice: string;
   measure: string;
 }
 
-export interface ReferenceVoiceNote extends WrittenSpan {
+export interface ReferenceVoiceNote extends WrittenNote {
   voiceId: string;
 }
 
 interface Assignment extends ScoreVoiceNote {
   voiceId: string;
-  evidence: "exact" | "context";
+  evidence: "exact" | "tie";
 }
 
 interface NoteBucket extends WrittenSpan {
@@ -24,7 +29,7 @@ interface NoteBucket extends WrittenSpan {
 }
 
 interface Ambiguity extends NoteBucket {
-  reason: "underdetermined" | "conflicting-evidence";
+  reason: "underdetermined" | "tie-evidence-conflict";
 }
 
 interface AuditedScoreVoice {
@@ -37,6 +42,7 @@ export interface VoiceAudit {
   referenceCount: number;
   assignments: Assignment[];
   differences: NoteBucket[];
+  tieDifferences: NoteBucket[];
   ambiguities: Ambiguity[];
   scoreVoices: AuditedScoreVoice[];
   scope: "global" | "measure" | "within-measure" | "incomplete";
@@ -48,8 +54,15 @@ function addCount(counts: VoiceCounts, id: string): void {
   counts.set(id, (counts.get(id) ?? 0) + 1);
 }
 
-function uniqueVoice(counts: VoiceCounts | undefined): string | undefined {
-  return counts?.size === 1 ? counts.keys().next().value : undefined;
+function groupByTie<T extends WrittenNote>(notes: readonly T[]): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const note of notes) {
+    const key = `${note.tieStart}:${note.tieStop}`;
+    const group = groups.get(key) ?? [];
+    group.push(note);
+    groups.set(key, group);
+  }
+  return groups;
 }
 
 /** Compare written note segments on a common integer tick grid, including tie continuations. */
@@ -69,8 +82,8 @@ export function auditVoiceAssignments(
 
   const assignments: Assignment[] = [];
   const differences: NoteBucket[] = [];
+  const tieDifferences: NoteBucket[] = [];
   const ambiguities: Ambiguity[] = [];
-  const unisons: NoteBucket[] = [];
   const global = new Map<string, VoiceCounts>();
   const local = new Map<string, Map<string, VoiceCounts>>();
 
@@ -90,62 +103,36 @@ export function auditVoiceAssignments(
     const { scoreNotes, referenceNotes } = bucket;
     if (scoreNotes.length !== referenceNotes.length) {
       differences.push(bucket);
-    } else if (referenceNotes.every(({ voiceId }) => voiceId === referenceNotes[0].voiceId)) {
-      for (const note of scoreNotes) record(note, referenceNotes[0].voiceId, "exact");
-    } else {
-      unisons.push(bucket);
-    }
-  }
-
-  // Use only direct evidence when resolving unisons. A contextual assignment
-  // must not become evidence for guessing at another ambiguous group.
-  const contextual: Assignment[] = [];
-  for (const bucket of unisons) {
-    const remaining = new Map<string, ReferenceVoiceNote[]>();
-    for (const note of bucket.referenceNotes) {
-      const notes = remaining.get(note.voiceId) ?? [];
-      notes.push(note);
-      remaining.set(note.voiceId, notes);
-    }
-
-    const matched: Assignment[] = [];
-    const unresolved: ScoreVoiceNote[] = [];
-    let conflict = false;
-    for (const note of bucket.scoreNotes) {
-      const localEvidence = local.get(note.scoreVoice)?.get(note.measure);
-      const voiceId = uniqueVoice(localEvidence ?? global.get(note.scoreVoice));
-      if (voiceId === undefined) {
-        unresolved.push(note);
-        continue;
-      }
-      const candidates = remaining.get(voiceId);
-      if (!candidates?.pop()) {
-        conflict = true;
-        break;
-      }
-      if (candidates.length === 0) remaining.delete(voiceId);
-      matched.push({ ...note, voiceId, evidence: "context" });
-    }
-    if (conflict) {
-      ambiguities.push({ ...bucket, reason: "conflicting-evidence" });
       continue;
     }
 
-    contextual.push(...matched);
-    if (unresolved.length === 0) continue;
-    if (remaining.size === 1) {
-      const [voiceId] = remaining.keys();
-      for (const note of unresolved) contextual.push({ ...note, voiceId, evidence: "context" });
-    } else {
-      ambiguities.push({
-        ...bucket,
-        scoreNotes: unresolved,
-        referenceNotes: [...remaining.values()].flat(),
-        reason: "underdetermined",
-      });
+    const scoreGroups = groupByTie(scoreNotes);
+    const referenceGroups = groupByTie(referenceNotes);
+    const tieMismatch = [...scoreGroups].some(([key, notes]) => referenceGroups.get(key)?.length !== notes.length);
+    if (tieMismatch) tieDifferences.push(bucket);
+
+    const { voiceId } = referenceNotes[0];
+    if (referenceNotes.every((note) => note.voiceId === voiceId)) {
+      for (const note of scoreNotes) record(note, voiceId, "exact");
+      continue;
+    }
+    if (tieMismatch) {
+      ambiguities.push({ ...bucket, reason: "tie-evidence-conflict" });
+      continue;
+    }
+
+    // Neighboring assignments can suggest a label, but a written voice number
+    // can change roles within a measure. Require independent evidence here.
+    for (const [key, compatibleScore] of scoreGroups) {
+      const compatibleReference = referenceGroups.get(key)!;
+      const { voiceId: compatibleVoice } = compatibleReference[0];
+      if (compatibleReference.every((note) => note.voiceId === compatibleVoice)) {
+        for (const note of compatibleScore) record(note, compatibleVoice, "tie");
+      } else {
+        ambiguities.push({ ...bucket, scoreNotes: compatibleScore, referenceNotes: compatibleReference, reason: "underdetermined" });
+      }
     }
   }
-  for (const { voiceId, evidence, ...note } of contextual) record(note, voiceId, evidence);
 
   const scoreVoices = [...local].map(([scoreVoice, measures]) => ({
     scoreVoice,
@@ -158,5 +145,5 @@ export function auditVoiceAssignments(
   else if (scoreVoices.some(({ measures }) => measures.some(({ voices }) => voices.length > 1))) scope = "within-measure";
   else if ([...global.values()].some((voices) => voices.size > 1)) scope = "measure";
 
-  return { scoreCount: score.length, referenceCount: reference.length, assignments, differences, ambiguities, scoreVoices, scope };
+  return { scoreCount: score.length, referenceCount: reference.length, assignments, differences, tieDifferences, ambiguities, scoreVoices, scope };
 }

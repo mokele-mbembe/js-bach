@@ -6,10 +6,11 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { unzipSync } from "fflate";
 import { toPerformance } from "../src/performance.js";
+import { describeVoices } from "../src/playback-asset.js";
 import { midiPitch, type ScoreIR } from "../src/score-ir.js";
 import { movements, performanceForMovement, readMovementScore } from "./corpus.js";
 import { downloadSource, verifySourceBytes } from "./source-download.js";
-import { auditVoiceAssignments, type ScoreVoiceNote, type VoiceAudit } from "./voice-audit-matcher.js";
+import { auditVoiceAssignments, type ReferenceVoiceNote, type ScoreVoiceNote, type VoiceAudit } from "./voice-audit-matcher.js";
 import { readLilyPondVoices } from "./voice-reference-lilypond.js";
 
 interface VoiceReference {
@@ -103,8 +104,19 @@ function scoreNotes(score: ScoreIR, ticksPerQuarter: number): ScoreVoiceNote[] {
   return score.measures.flatMap(({ number, startTick, events }) => events.flatMap((event) => {
     if (event.kind !== "note" || event.grace || event.durationTicks <= 0) return [];
     return [{ measure: number, scoreVoice: event.voice, midiPitch: midiPitch(event.pitch),
-      tick: (startTick + event.offsetTicks) * scale, durationTicks: event.durationTicks * scale }];
+      tick: (startTick + event.offsetTicks) * scale, durationTicks: event.durationTicks * scale,
+      tieStart: event.tieStart, tieStop: event.tieStop }];
   }));
+}
+
+function checkPlayback(score: ScoreIR, mapping: Parameters<typeof performanceForMovement>[1]) {
+  try {
+    const performance = performanceForMovement(score, mapping);
+    assert.deepEqual({ ...performance, notes: performance.notes.map(({ voiceId, ...note }) => note) }, toPerformance(score));
+    return { status: "passed", performedNotes: performance.notes.length } as const;
+  } catch (error) {
+    return { status: "failed", reason: error instanceof Error ? error.message : String(error) } as const;
+  }
 }
 
 function compilerCheck(score: ScoreIR, audit: VoiceAudit, id: string) {
@@ -123,32 +135,31 @@ function compilerCheck(score: ScoreIR, audit: VoiceAudit, id: string) {
     }
   }
   const voices = [...new Set(audit.assignments.map(({ voiceId }) => voiceId))].sort().map((name) => ({ name, ids: idsByVoice.get(name) ?? [] }));
-  try {
-    const performance = performanceForMovement(score, { id, voices, voiceOverrides });
-    assert.deepEqual({ ...performance, notes: performance.notes.map(({ voiceId, ...note }) => note) }, toPerformance(score));
-    return { status: "passed", performedNotes: performance.notes.length } as const;
-  } catch (error) {
-    return { status: "failed", reason: error instanceof Error ? error.message : String(error) } as const;
-  }
+  return checkPlayback(score, { id, voices, voiceOverrides });
 }
 
 function markdown(id: string, report: Awaited<ReturnType<typeof auditMovement>>): string {
   const { reference, audit, ticksPerQuarter, withinMeasure, checks, scoreOnly, referenceOnly } = report;
-  const context = audit.assignments.filter(({ evidence }) => evidence === "context");
+  const byTie = audit.assignments.filter(({ evidence }) => evidence === "tie").length;
+  const tieLabel = ({ tieStart, tieStop }: { tieStart: boolean; tieStop: boolean }) =>
+    tieStart && tieStop ? "tie in/out" : tieStart ? "tie out" : tieStop ? "tie in" : "untied";
   const lines = [
     `# ${id} voice audit`, "",
     `- MusicXML: ${report.score.edition}. [Score source](${report.score.source})`,
     `- Reference: ${reference.credit}. ${reference.license}. [Engraving source](${reference.source})`,
     `- Input SHA-256: \`${reference.inputSha256}\`. LilyPond SHA-256: \`${reference.engravingSha256}\`.`,
     `- Written tick grid: ${ticksPerQuarter} ticks per quarter. Includes tie continuations and excludes grace notes.`, "",
-    `**${audit.scoreCount - scoreOnly} exact note pairs** from ${audit.scoreCount} score segments and ${audit.referenceCount} reference segments. Musical voices were assigned to ${audit.assignments.length} score segments (${audit.assignments.length - context.length} directly and ${context.length} from unison context).`, "",
-    `Exact multiset differences: ${scoreOnly} score-only segments and ${referenceOnly} reference-only segments. Unresolved exact unison groups: ${audit.ambiguities.length}.`, "",
+    `**${audit.scoreCount - scoreOnly} exact note pairs** from ${audit.scoreCount} score segments and ${audit.referenceCount} reference segments. Musical voices were assigned to ${audit.assignments.length} score segments (${audit.assignments.length - byTie} directly and ${byTie} using written ties).`, "",
+    `Exact multiset differences: ${scoreOnly} score-only segments and ${referenceOnly} reference-only segments. Unresolved exact unison groups: ${audit.ambiguities.length}. Matched spans with different tie counts or directions: ${audit.tieDifferences.length}.`, "",
     `Assignment scope: **${audit.scope}**. Measure overrides are **${report.measureCoverage}**. Within-measure conflicts with direct evidence: **${withinMeasure.length}**.`, "",
     ...(withinMeasure.some(({ sharedOnsets }) => sharedOnsets.length > 0)
       ? ["Some of those conflicts share an onset. Identifying a voice there requires distinguishing individual notes at the same tick.", ""] : []),
     `Playback compiler check: **${checks.compiler.status}**${checks.compiler.status === "passed" ? ` (${checks.compiler.performedNotes} performed notes)` : ""}.`,
     ...(checks.compiler.status === "passed" ? [] : [`- ${checks.compiler.reason}`]),
-    ...(checks.manifest ? [`Existing manifest: ${checks.manifest.checked} assigned segments checked, ${checks.manifest.conflicts.length} disagreements.`] : []), "",
+    ...(checks.manifest ? [
+      `Existing manifest: ${checks.manifest.checked} assigned segments checked, ${checks.manifest.conflicts.length} disagreements. Per-voice written spans and ties: **${checks.manifest.segmentCountsMatch ? "matched" : "differ"}** (${checks.manifest.scoreSegments} score segments and ${checks.manifest.referenceSegments} reference segments).`,
+      `Existing manifest playback: **${checks.manifest.playback.status}** (${checks.manifest.playback.status === "passed" ? `${checks.manifest.playback.performedNotes} performed notes` : checks.manifest.playback.reason}).`,
+    ] : []), "",
     "## Score labels and matched musical voices", "",
     "| Score voice | Musical voices and matched segments | Unassigned score segments |", "| --- | --- | ---: |",
     ...report.scoreVoices.map(({ scoreVoice, voices, unassigned }) =>
@@ -159,13 +170,21 @@ function markdown(id: string, report: Awaited<ReturnType<typeof auditMovement>>)
   else lines.push("| Measure | Score voice | Shared onset offsets | Offsets in ticks, MIDI pitches and reference voices |", "| --- | --- | --- | --- |",
     ...withinMeasure.map(({ measure, scoreVoice, sharedOnsets, notes }) => `| ${measure} | ${scoreVoice} | ${sharedOnsets.join(", ") || "—"} | ${notes.map(({ offsetTicks, midiPitch, voiceId }) =>
       `${offsetTicks}: ${midiPitch} ${voiceId}`).join(", ")} |`));
-  lines.push("", "## Exact multiset differences and unresolved unisons", "");
-  if (audit.differences.length + audit.ambiguities.length === 0) lines.push("None.");
+  lines.push("", "## Written differences and unresolved unisons", "");
+  const tieConflicts = new Set(audit.ambiguities.filter(({ reason }) => reason === "tie-evidence-conflict")
+    .map(({ tick, durationTicks, midiPitch }) => `${tick}:${durationTicks}:${midiPitch}`));
+  const findings = [
+    ...audit.differences.map((bucket) => ({ ...bucket, reason: "different multiplicity" })),
+    ...audit.ambiguities,
+    ...audit.tieDifferences.filter(({ tick, durationTicks, midiPitch }) => !tieConflicts.has(`${tick}:${durationTicks}:${midiPitch}`))
+      .map((bucket) => ({ ...bucket, reason: "different written ties" })),
+  ];
+  if (findings.length === 0) lines.push("None.");
   else lines.push("| Tick | Duration | MIDI pitch | Score voice labels | Reference voices | Finding |", "| ---: | ---: | ---: | --- | --- | --- |",
-    ...[...audit.differences.map((bucket) => ({ ...bucket, reason: "different multiplicity" })), ...audit.ambiguities]
+    ...findings
       .sort((a, b) => a.tick - b.tick || a.midiPitch - b.midiPitch)
       .map(({ tick, durationTicks, midiPitch, scoreNotes, referenceNotes, reason }) =>
-        `| ${tick} | ${durationTicks} | ${midiPitch} | ${scoreNotes.map(({ measure, scoreVoice }) => `${scoreVoice} (m. ${measure})`).join(", ") || "—"} | ${referenceNotes.map(({ voiceId }) => voiceId).join(", ") || "—"} | ${reason} |`));
+        `| ${tick} | ${durationTicks} | ${midiPitch} | ${scoreNotes.map((note) => `${note.scoreVoice} (m. ${note.measure}, ${tieLabel(note)})`).join(", ") || "—"} | ${referenceNotes.map((note) => `${note.voiceId} (${tieLabel(note)})`).join(", ") || "—"} | ${reason} |`));
   lines.push("", "The JSON report retains each segment and its evidence. Review any edition differences and uncertain assignments before editing the corpus manifest.", "");
   return lines.join("\n");
 }
@@ -179,9 +198,10 @@ async function auditMovement(id: string, reference: VoiceReference) {
   const ticksPerQuarter = commonGrid(score.ticksPerQuarter, engraving.ticksPerQuarter);
   const scale = ticksPerQuarter / engraving.ticksPerQuarter;
   const written = scoreNotes(score, ticksPerQuarter);
-  const audit = auditVoiceAssignments(written, engraving.notes.map((note) => ({
+  const referenceNotes = engraving.notes.map((note) => ({
     ...note, tick: note.tick * scale, durationTicks: note.durationTicks * scale,
-  })));
+  }));
+  const audit = auditVoiceAssignments(written, referenceNotes);
   const countByScoreVoice = new Map<string, number>();
   for (const { scoreVoice } of written) countByScoreVoice.set(scoreVoice, (countByScoreVoice.get(scoreVoice) ?? 0) + 1);
   const scoreVoices = [...countByScoreVoice].sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true })).map(([scoreVoice, count]) => {
@@ -205,14 +225,7 @@ async function auditMovement(id: string, reference: VoiceReference) {
       return [{ measure: number, scoreVoice, sharedOnsets, notes: offsets }];
     });
   });
-  const defaults = new Map(movement.voices?.flatMap(({ name, ids }) => ids.map((id) => [id, name.toLowerCase()] as const)));
-  const manifest = movement.voices?.length ? {
-    checked: audit.assignments.length,
-    conflicts: audit.assignments.filter(({ measure, scoreVoice, voiceId }) => {
-      const override = movement.voiceOverrides?.find((rule) => rule.scoreVoice === scoreVoice && rule.measures.includes(measure));
-      return (override?.voiceId ?? defaults.get(scoreVoice)) !== voiceId;
-    }),
-  } : undefined;
+  const manifest = movement.voices?.length ? checkManifest(movement, score, written, referenceNotes, audit) : undefined;
   return {
     id, ticksPerQuarter, measureCount: score.measures.length, audit, withinMeasure, scoreVoices,
     measureCoverage: withinMeasure.length || audit.scope === "within-measure" ? "insufficient" : audit.scope === "incomplete" ? "undetermined" : "sufficient",
@@ -221,6 +234,31 @@ async function auditMovement(id: string, reference: VoiceReference) {
     scoreOnly: audit.differences.reduce((sum, row) => sum + Math.max(0, row.scoreNotes.length - row.referenceNotes.length), 0),
     referenceOnly: audit.differences.reduce((sum, row) => sum + Math.max(0, row.referenceNotes.length - row.scoreNotes.length), 0),
     checks: { compiler: compilerCheck(score, audit, id), manifest },
+  };
+}
+
+function checkManifest(
+  movement: (typeof movements)[number], score: ScoreIR, written: readonly ScoreVoiceNote[],
+  reference: readonly ReferenceVoiceNote[], audit: VoiceAudit,
+) {
+  const { byScoreVoice } = describeVoices(movement.voices);
+  function manifestVoice({ measure, scoreVoice }: ScoreVoiceNote) {
+    const override = movement.voiceOverrides?.find((rule) => rule.scoreVoice === scoreVoice && rule.measures.includes(measure));
+    return override?.voiceId ?? byScoreVoice.get(scoreVoice);
+  }
+  const segmentKey = ({ tick, durationTicks, midiPitch, tieStart, tieStop }: ScoreVoiceNote | ReferenceVoiceNote, voiceId?: string) =>
+    `${voiceId ?? ""}:${tick}:${durationTicks}:${midiPitch}:${tieStart}:${tieStop}`;
+  // Verify the existing manifest as a hypothesis without feeding it to the matcher.
+  const scoreSegments = written.map((note) => segmentKey(note, manifestVoice(note))).sort();
+  const referenceSegments = reference.map((note) => segmentKey(note, note.voiceId)).sort();
+  return {
+    checked: audit.assignments.length,
+    conflicts: audit.assignments.filter((note) => manifestVoice(note) !== note.voiceId),
+    scoreSegments: scoreSegments.length,
+    referenceSegments: referenceSegments.length,
+    segmentCountsMatch: scoreSegments.length === referenceSegments.length &&
+      scoreSegments.every((segment, index) => segment === referenceSegments[index]),
+    playback: checkPlayback(score, movement),
   };
 }
 

@@ -5,6 +5,8 @@ interface ReferenceNote {
   tick: number;
   durationTicks: number;
   midiPitch: number;
+  tieStart: boolean;
+  tieStop: boolean;
 }
 
 const ticksPerQuarter = 256;
@@ -19,6 +21,11 @@ type PitchStyle = keyof typeof pitchStyles;
 const displayCommands = new Set([
   "voiceOne", "voiceTwo", "voiceThree", "voiceFour", "oneVoice", "voiceUp", "voiceDown",
   "shiftOn", "shiftOff", "tieUp", "tieDown", "slurDashed", "slurUp", "glissando", "fermata", "trill",
+]);
+const contextCommands = new Set(["\\change", "\\context", "\\new"]);
+const parsedCommands = new Set(["relative", "context", "new", "bar", "clef", "rest", "key", "major", "minor", "time"]);
+const topLevelDirectives = new Set([
+  "\\book", "\\bookpart", "\\header", "\\include", "\\language", "\\layout", "\\midi", "\\paper", "\\score", "\\version",
 ]);
 
 function pitchLanguage(source: string): PitchStyle {
@@ -49,18 +56,43 @@ function pitchReader(language: PitchStyle) {
   };
 }
 
-function layoutAliases(source: string): ReadonlySet<string> {
-  const declarations = [...source.matchAll(/^[ \t]*([A-Za-z][A-Za-z0-9_]*)[ \t]*=[ \t]*([^\r\n]+)/gmu)];
-  const aliases = new Set(displayCommands);
-  const declared = new Set<string>();
-  const redefined = new Set<string>();
-  for (const [, name] of declarations) {
-    if (declared.has(name)) redefined.add(name);
-    declared.add(name);
-    aliases.delete(name);
+function readDeclarations(source: string): ReadonlyMap<string, string[]> {
+  const tokens = [...source.matchAll(/"(?:[^"\\]|\\.)*"|\\[A-Za-z][\w-]*|[A-Za-z][\w-]*|<<|>>|[{}=]/gu)];
+  const statements: { start: number; assignment?: { name: string; valueStart: number } }[] = [];
+  let depth = 0;
+  for (let index = 0; index < tokens.length; index++) {
+    const { 0: token, index: start } = tokens[index];
+    if (token === "{" || token === "<<") depth++;
+    if (token === "}" || token === ">>") depth--;
+    if (depth !== 0) continue;
+    if (topLevelDirectives.has(token)) {
+      statements.push({ start });
+      continue;
+    }
+    const equals = tokens[index + 1];
+    // Staff = name in a context expression belongs to the expression, not the variable scope.
+    if (equals?.[0] !== "=" || contextCommands.has(tokens[index - 1]?.[0]) ||
+      !/^\s*$/u.test(source.slice(start + token.length, equals.index))) continue;
+    const name = token.startsWith('"') ? token.slice(1, -1) : token;
+    if (/^[A-Za-z][A-Za-z0-9_]*$/u.test(name)) statements.push({ start, assignment: { name, valueStart: equals.index + 1 } });
   }
-  for (const [, name, definition] of declarations) {
-    if (redefined.has(name)) continue;
+  const declarations = new Map<string, string[]>();
+  for (const [index, { assignment }] of statements.entries()) {
+    if (!assignment) continue;
+    const { name, valueStart } = assignment;
+    const definitions = declarations.get(name) ?? [];
+    definitions.push(source.slice(valueStart, statements[index + 1]?.start).trim());
+    declarations.set(name, definitions);
+  }
+  return declarations;
+}
+
+function layoutAliases(declarations: ReadonlyMap<string, string[]>): ReadonlySet<string> {
+  const aliases = new Set(displayCommands);
+  for (const name of declarations.keys()) aliases.delete(name);
+  for (const [name, definitions] of declarations) {
+    if (definitions.length !== 1) continue;
+    const [definition] = definitions;
     if (/^\\change\s+Staff\s*=\s*\w+\s*$/u.test(definition) ||
       /^\\once\s*\\override\s+Tie\s+#'Y-offset\s*=\s*#-?\d+(?:\.\d+)?\s*$/u.test(definition)) {
       aliases.add(name);
@@ -88,6 +120,7 @@ function voiceNotes(
   let tick = 0;
   let previousDuration = ticksPerQuarter;
   let ticksPerBar = ticksPerQuarter * 4;
+  let openTie: ReferenceNote | undefined;
   const notes: ReferenceNote[] = [];
   const tokens = body.match(/"(?:[^"\\]|\\.)*"|\\[A-Za-z][A-Za-z0-9]*|[a-zA-Z]+[',]*[!?]?|\d+|\.+|[^\s]/gu) ?? [];
   let index = 0;
@@ -114,7 +147,14 @@ function voiceNotes(
       if (tick % ticksPerBar !== 0) throw new Error(`${variable}: LilyPond bar check failed at tick ${tick}`);
       continue;
     }
-    if (token === "~" || token === "(" || token === ")" || token === "[" || token === "]") continue;
+    if (token === "~") {
+      const previous = notes.at(-1);
+      if (!previous || openTie || previous.tick + previous.durationTicks !== tick) throw unsupported(token);
+      previous.tieStart = true;
+      openTie = previous;
+      continue;
+    }
+    if (token === "(" || token === ")" || token === "[" || token === "]") continue;
     if (token === "\\global") {
       const meter = /^\s*\\key\s+(\S+)\s+\\(?:major|minor)\s+\\time\s+(\d+)\/(\d+)\s*$/u.exec(global ?? "");
       if (tick !== 0 || !meter || !parsePitch(meter[1])) throw unsupported(token);
@@ -131,14 +171,15 @@ function voiceNotes(
     }
     if (token.startsWith("\\") && aliases.has(token.slice(1))) continue;
     if (token === "r" || token === "R" || token === "s") {
-      const duration = readDuration();
-      let count = 1;
+      if (openTie) throw unsupported("tie followed by rest or skip");
+      let duration = readDuration();
       if (tokens[index] === "*") {
         index++;
         if (!/^[1-9]\d*$/u.test(tokens[index] ?? "")) throw unsupported("*");
-        count = Number(tokens[index++]);
+        duration *= Number(tokens[index++]);
       }
-      tick += duration * count;
+      previousDuration = duration;
+      tick += duration;
       if (!Number.isSafeInteger(tick)) throw unsupported(token);
       continue;
     }
@@ -149,15 +190,19 @@ function voiceNotes(
     preceding += distance + pitch.offset;
     const durationTicks = readDuration();
     if (tokens[index] === "\\rest") {
+      if (openTie) throw unsupported("tie followed by pitched rest");
       index++;
     } else {
       const midiPitch = (Math.floor(preceding / 7) + 1) * 12 + semitones[pitch.step] + pitch.alter;
       if (midiPitch < 0 || midiPitch > 127) throw unsupported(token);
-      notes.push({ voiceId, tick, durationTicks, midiPitch });
+      if (openTie && openTie.midiPitch !== midiPitch) throw unsupported("tie to a different pitch");
+      notes.push({ voiceId, tick, durationTicks, midiPitch, tieStart: false, tieStop: openTie !== undefined });
+      openTie = undefined;
     }
     tick += durationTicks;
     if (!Number.isSafeInteger(tick)) throw unsupported(token);
   }
+  if (openTie) throw unsupported("tie without a continuation");
   return notes;
 }
 
@@ -166,11 +211,16 @@ export function readLilyPondVoices(source: string, variables: Readonly<Record<st
   ticksPerQuarter: number;
   notes: ReferenceNote[];
 } {
-  const code = source.replace(/("(?:[^"\\]|\\.)*")|%\{[\s\S]*?%\}|%[^\r\n]*/gu, (_, quoted: string | undefined) => quoted ?? "");
+  const code = source.replace(/("(?:[^"\\]|\\.)*")|%\{[\s\S]*?%\}|%[^\r\n]*/gu, (_, quoted: string | undefined) => quoted ?? " ");
   const parsePitch = pitchReader(pitchLanguage(code));
-  const aliases = layoutAliases(code);
-  const global = [...code.matchAll(/^[ \t]*global\s*=/gmu)].length === 1
-    ? /^[ \t]*global\s*=\s*\{([^{}]*)\}/mu.exec(code)?.[1]
+  const declarations = readDeclarations(code);
+  for (const name of parsedCommands) {
+    if (declarations.has(name)) throw new Error(`Unsupported redefinition of LilyPond command: ${name}`);
+  }
+  const aliases = layoutAliases(declarations);
+  const globalDefinitions = declarations.get("global");
+  const global = globalDefinitions?.length === 1
+    ? /^\{([^{}]*)\}/u.exec(globalDefinitions[0])?.[1]
     : undefined;
   const entries = Object.entries(variables);
   if (entries.length === 0 || new Set(entries.map(([, id]) => id)).size !== entries.length) {
@@ -178,9 +228,9 @@ export function readLilyPondVoices(source: string, variables: Readonly<Record<st
   }
   const notes = entries.flatMap(([variable, voiceId]) => {
     if (!/^[A-Za-z][A-Za-z0-9_]*$/u.test(variable) || !voiceId) throw new Error(`Invalid LilyPond voice selection: ${variable}`);
-    const assignment = `^[ \\t]*${variable}\\s*=`;
-    const match = new RegExp(`${assignment}\\s*\\\\relative\\s*([^{}]*?)\\{([^{}]*)\\}`, "mu").exec(code);
-    if (!match || [...code.matchAll(new RegExp(assignment, "gmu"))].length !== 1) {
+    const definitions = declarations.get(variable);
+    const match = definitions?.length === 1 && /^\\relative\s*([^{}]*?)\{([^{}]*)\}/u.exec(definitions[0]);
+    if (!match) {
       throw new Error(`${variable}: expected one inline LilyPond relative voice block`);
     }
     const [, header, body] = match;
