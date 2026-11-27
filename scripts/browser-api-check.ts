@@ -27,6 +27,8 @@ declare global {
       notes: ScheduledNote[];
       expected?: PerformanceEvent;
       nextStartSeconds?: number;
+      callbackFailure?: { position: number; audioTime: number; callbacks: number; oscillators: number };
+      callbackPosition?(): number;
       clock(): number;
     };
   }
@@ -166,6 +168,7 @@ export async function checkBrowserApi(browser: Browser, address: string, package
       await route.fulfill({ contentType: "text/html", body: `<!doctype html>
         <button id="prelude">Prelude</button><button id="bass">Bass</button><button id="slow">Slow</button>
         <button id="scheduled">Schedule and stop</button><button id="invalid-mute">Check invalid mute</button>
+        <button id="rejecting">Reject callback</button>
         <button id="inspect">Inspect fugue</button><button id="stop">Stop</button><output id="status"></output>
         <script type="importmap">${JSON.stringify({ imports: { [packageName]: entry } })}</script>
         <script type="module">
@@ -223,6 +226,20 @@ export async function checkBrowserApi(browser: Browser, address: string, package
             const handle = await play("bwv846", options);
             try { await expectRangeError(() => handle.setVoiceMuted("alto", true)); }
             finally { handle.stop(); }
+          });
+          bind("rejecting", async () => {
+            const failure = new Error("Scheduled callback rejected");
+            const handle = await play("bwv846", { movement: "fugue", voice: "Bass", async onNote(note) {
+              audio.notes.push(note);
+              if (audio.notes.length === 1) throw failure;
+            } });
+            audio.callbackPosition = () => handle.position();
+            window.addEventListener("error", event => {
+              if (event.error === failure) {
+                audio.callbackFailure = { position: handle.position(), audioTime: audio.clock(),
+                  callbacks: audio.notes.length, oscillators: audio.starts.length };
+              }
+            }, { once: true });
           });
           bind("inspect", async () => {
             const options = { movement: "fugue" };
@@ -284,6 +301,24 @@ export async function checkBrowserApi(browser: Browser, address: string, package
 
     await page.locator("#invalid-mute").click();
     await waitForStatus("Started invalid-mute");
+
+    await page.evaluate(() => {
+      window.jsBachApiAudio.notes = [];
+      window.jsBachApiAudio.starts = [];
+    });
+    const [uncaught] = await Promise.all([page.waitForEvent("pageerror"), page.locator("#rejecting").click()]);
+    assert.equal(uncaught.message, "Scheduled callback rejected");
+    await waitForStatus("Started rejecting");
+    const failure = await page.evaluate(() => window.jsBachApiAudio.callbackFailure);
+    assert.ok(failure, "The original rejection should surface as a browser error");
+    assert.ok(failure.callbacks > 0);
+    await page.waitForFunction((past) => window.jsBachApiAudio.clock() >= past,
+      failure.audioTime + scheduled.nextStartSeconds);
+    assert.deepEqual(await page.evaluate(() => {
+      const { notes, starts, callbackPosition } = window.jsBachApiAudio;
+      return { callbacks: notes.length, oscillators: starts.length, position: callbackPosition?.() };
+    }), { callbacks: failure.callbacks, oscillators: failure.oscillators, position: failure.position },
+    "An async callback rejection should stop scheduling and freeze the playback handle");
 
     await page.route(slowPrelude, async (route) => { await pending; await route.fallback(); }, { times: 1 });
     const [held] = await Promise.all([page.waitForRequest(slowPrelude), page.locator("#slow").click()]);

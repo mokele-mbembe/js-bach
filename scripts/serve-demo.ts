@@ -42,6 +42,19 @@ const types = new Map([
   [".html", "text/html"], [".css", "text/css"], [".js", "text/javascript"], [".json", "application/json"],
 ]);
 
+function scriptEncoding(acceptEncoding: string | undefined): "gzip" | "identity" | undefined {
+  const weights = new Map<string, number>();
+  for (const entry of acceptEncoding?.split(",") ?? []) {
+    const coding = /^\s*([^;\s]+)\s*(?:;\s*q\s*=\s*(0(?:\.\d{0,3})?|1(?:\.0{0,3})?))?\s*$/iu.exec(entry);
+    if (coding) weights.set(coding[1].toLowerCase(), Number(coding[2] ?? 1));
+  }
+  const wildcard = weights.get("*");
+  const gzip = weights.get("gzip") ?? wildcard ?? 0;
+  const identity = weights.get("identity");
+  if (gzip > 0 && gzip >= (identity ?? 0)) return "gzip";
+  if ((identity ?? (wildcard === 0 ? 0 : 1)) > 0) return "identity";
+}
+
 const server = createServer(async (request, response) => {
   if (request.method !== "GET" && request.method !== "HEAD") {
     response.writeHead(405, { Allow: "GET, HEAD" }).end();
@@ -54,12 +67,17 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  const extension = extname(asset.pathname);
+  const script = extension === ".js";
+  const encoding = script ? scriptEncoding(request.headers["accept-encoding"]) : "identity";
+  if (encoding === undefined) {
+    response.writeHead(406, { Vary: "Accept-Encoding" }).end();
+    return;
+  }
+
   try {
     const contents = await readFile(asset);
-    const extension = extname(asset.pathname);
-    const script = extension === ".js";
-    const acceptsGzip = request.headers["accept-encoding"]?.split(",").some((encoding) => encoding.trim().toLowerCase() === "gzip");
-    const compressed = script && acceptsGzip;
+    const compressed = encoding === "gzip";
     const body = compressed ? gzipSync(contents) : contents;
     response.writeHead(200, {
       "Content-Type": `${types.get(extension)}; charset=utf-8`,

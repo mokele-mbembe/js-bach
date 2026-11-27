@@ -20,7 +20,7 @@ interface PackedPreview {
 declare global {
   interface Window {
     jsBachOscillatorStarts: number;
-    jsBachVoiceGainChanges: { bus: number; target: number }[];
+    jsBachVoiceGainChanges: { bus: number; target: number; initialGain?: number }[];
   }
 }
 
@@ -63,11 +63,21 @@ async function checkDemo(address: string, packageRoot: string) {
         start.call(this, when);
         window.jsBachOscillatorStarts++;
       };
+      const masters = new WeakSet<GainNode>();
+      const initialGains = new WeakMap<AudioParam, number>();
+      const connect = AudioNode.prototype.connect;
+      AudioNode.prototype.connect = function (this: AudioNode, destination: AudioNode | AudioParam) {
+        if (this instanceof GainNode) {
+          if (destination === this.context.destination) masters.add(this);
+          else if (destination instanceof GainNode && masters.has(destination)) initialGains.set(this.gain, this.gain.value);
+        }
+        return Reflect.apply(connect, this, arguments);
+      } as typeof connect;
       const buses = new WeakMap<AudioParam, number>();
       const setTarget = AudioParam.prototype.setTargetAtTime;
       AudioParam.prototype.setTargetAtTime = function (target, time, timeConstant) {
         if (!buses.has(this)) buses.set(this, window.jsBachVoiceGainChanges.length);
-        window.jsBachVoiceGainChanges.push({ bus: buses.get(this)!, target });
+        window.jsBachVoiceGainChanges.push({ bus: buses.get(this)!, target, initialGain: initialGains.get(this) });
         return setTarget.call(this, target, time, timeConstant);
       };
     });
@@ -105,7 +115,9 @@ async function checkDemo(address: string, packageRoot: string) {
     const afterRestore = await timeline();
     assert.ok(afterRestore.value > muted.value);
     assert.equal(afterRestore.max, beforeMute.max);
-    assert.deepEqual(await page.evaluate(() => window.jsBachVoiceGainChanges), [{ bus: 0, target: 0 }, { bus: 0, target: 1 }]);
+    assert.deepEqual(await page.evaluate(() => window.jsBachVoiceGainChanges), [
+      { bus: 0, target: 0, initialGain: 1 }, { bus: 0, target: 1, initialGain: 1 },
+    ]);
     await page.locator("#stop").click();
 
     for (const voice of ["Soprano", "Alto", "Tenor", "Bass"]) {
@@ -127,7 +139,13 @@ async function checkDemo(address: string, packageRoot: string) {
     assert.ok(preMuted.max > 97 && preMuted.max < 98, "Muting bass should preserve the full BWV 847 timeline");
     await page.waitForFunction((value) => document.querySelector<HTMLProgressElement>("#progress")!.value > value, preMuted.value);
     assert.deepEqual(await page.evaluate(() => window.jsBachVoiceGainChanges.slice(2)), [],
-      "A voice muted before play should start at zero gain without a live gain ramp");
+      "A voice muted before play should start without a live gain ramp");
+    await panel.getByText("Mute Bass", { exact: true }).click();
+    const restoredBass = await page.evaluate(() => window.jsBachVoiceGainChanges.slice(2).map(({ target, initialGain }) => ({ target, initialGain })));
+    assert.deepEqual(restoredBass, [{ target: 1, initialGain: 0 }],
+      "Restoring the Bass should turn up the bus that started at zero gain");
+    await panel.getByText("Mute Bass", { exact: true }).click();
+    assert.ok(await bass.isChecked());
 
     await page.locator("#works").getByText(/^BWV 848 · /).click();
     await panel.getByRole("heading", { name: /BWV 848 fugue/i }).waitFor();
@@ -204,7 +222,7 @@ try {
       `| Playwright-observed page requests | ${firstPlay.count} | ${firstPlay.body} | ${firstPlay.transfer} |`,
       `| Catalog and movement | ${firstScore.count} | ${firstScore.body} | ${firstScore.transfer} |`, "",
       "Playback checks covered the lazy piano rolls for BWV 846–849, unison and tied-note highlights during live mute and restore, full-movement timing, solos, and rapid switches.",
-      "The packaged browser API passed Node import, read-only voice and event queries including the BWV 848 tie across source voice IDs, and TypeScript declaration checks. Chromium verified scheduled note clocks, initial mute, name and ID voice controls, stopping inside a callback, and cancellation.", "",
+      "The packaged browser API passed Node import, read-only voice and event queries including the BWV 848 tie across source voice IDs, and TypeScript declaration checks. Chromium verified scheduled note clocks, initial mute, name and ID voice controls, callback stops and rejections, and cancellation.", "",
     ].join("\n");
     writeFileSync(join(dirname(metadata), "size-report.md"), report);
     if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, report);

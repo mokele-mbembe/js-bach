@@ -17,7 +17,10 @@ export interface PlayOptions extends MovementOptions {
   voice?: string;
   /** Voice names or IDs to mute from the start. During a solo, only the selected voice is available. */
   muted?: readonly string[];
-  /** Called after play resolves, up to 150 ms before a note starts. Includes muted notes until playback stops. */
+  /**
+   * Called after play resolves, up to 150 ms before a note starts. Includes muted notes.
+   * Scheduling continues while a callback promise is pending. A throw or rejection stops playback.
+   */
   onNote?: (note: ScheduledNote) => void;
 }
 
@@ -122,6 +125,10 @@ export function createBrowserPlayer(
           if (active === handle) active = undefined;
         },
       };
+      function stopOnCallbackError(error: unknown): never {
+        handle.stop();
+        throw error;
+      }
       playback = playPerformance(context, performance, () => {
         finalPosition = performance.durationSeconds;
         if (active === handle) active = undefined;
@@ -129,10 +136,12 @@ export function createBrowserPlayer(
         muted: mutedIds,
         onNote: onNote && ((note) => {
           try {
-            onNote(note);
+            const result: unknown = onNote(note);
+            if (result !== null && (typeof result === "object" || typeof result === "function")) {
+              return Promise.resolve(result).catch(stopOnCallbackError);
+            }
           } catch (error) {
-            handle.stop();
-            throw error;
+            stopOnCallbackError(error);
           }
         }),
       });

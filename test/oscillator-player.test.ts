@@ -202,6 +202,49 @@ test("clears the interval and stops scheduled oscillators if onNote throws", (t)
   assert.equal(oscillators.length, 1);
 });
 
+test("keeps scheduling while onNote is pending and stops on a rejection", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  const clearInterval = t.mock.method(globalThis, "clearInterval");
+  const reports: (() => void)[] = [];
+  t.mock.method(globalThis, "queueMicrotask", (report: () => void) => { reports.push(report); });
+  const { audio, context, oscillators } = fakeAudio();
+  const error = new Error("async callback failed");
+  let rejectNote!: (reason: unknown) => void;
+  const pending = new Promise<void>((_, reject) => { rejectNote = reject; });
+  const pitches: number[] = [];
+  playPerformance(audio, {
+    durationSeconds: 1,
+    notes: [
+      { startSeconds: 0, endSeconds: 0.5, midiPitch: 60, voice: "4" },
+      { startSeconds: 0.08, endSeconds: 0.5, midiPitch: 64, voice: "2" },
+      { startSeconds: 0.6, endSeconds: 0.8, midiPitch: 67, voice: "1" },
+    ],
+  }, () => assert.fail("Failed playback must not naturally end"), [], {
+    async onNote(note) {
+      pitches.push(note.midiPitch);
+      if (note.midiPitch === 60) await pending;
+    },
+  });
+  context.currentTime = 0.025;
+  t.mock.timers.tick(25);
+  assert.deepEqual(pitches, [60, 64]);
+  assert.equal(oscillators.length, 2);
+  assert.equal(clearInterval.mock.callCount(), 0);
+
+  context.currentTime = 0.08;
+  rejectNote(error);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(clearInterval.mock.callCount(), 1);
+  assert.deepEqual(oscillators.map(({ stops }) => stops), [[0.55, 0.08 + 0.012], [0.55, 0.08]]);
+  assert.equal(reports.length, 1);
+  assert.throws(reports[0], (reported) => reported === error);
+
+  context.currentTime = 0.65;
+  t.mock.timers.tick(75);
+  assert.deepEqual(pitches, [60, 64]);
+  assert.equal(oscillators.length, 2);
+});
+
 test("rejects unknown initially muted IDs before creating the audio graph", (t) => {
   t.mock.timers.enable({ apis: ["setInterval"] });
   const setInterval = t.mock.method(globalThis, "setInterval");

@@ -54,7 +54,7 @@ const playback = await play("bwv846", {
 });
 ```
 
-Run this from a user interaction. `onNote` runs up to 150 ms before the oscillator starts, including for muted voices. Compare `startSeconds` and `endSeconds` with `playback.position()` to highlight the notes as they sound. `audioStartTime` and `audioEndTime` give the Web Audio times for scheduling against the same audio clock. [Callback, mute, and solo semantics](docs/npm-preview.md#programmable-voices)
+Run this from a user interaction. `onNote` runs up to 150 ms before the oscillator starts, including for muted voices. Scheduling continues while a callback promise is pending. A thrown error or rejected promise stops that playback. Compare `startSeconds` and `endSeconds` with `playback.position()` to highlight the notes as they sound. `audioStartTime` and `audioEndTime` give the Web Audio times for scheduling against the same audio clock. [Callback, mute, and solo semantics](docs/npm-preview.md#programmable-voices)
 
 ## Pack the npm preview
 

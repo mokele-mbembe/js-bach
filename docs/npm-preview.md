@@ -65,7 +65,9 @@ document.querySelector("#mute-alto").addEventListener("change", (event) => {
 
 Draw a piano roll from `notes` and `durationSeconds`. To highlight scheduled notes when they sound, compare `playback.position()` with their `startSeconds` and `endSeconds`. Whole-movement playback uses the `getPerformance()` timeline. Solo playback rebases the selected voice to its first entrance.
 
-`onNote` receives a `ScheduledNote` when Web Audio schedules the oscillator, up to 150 ms ahead. `audioStartTime` and `audioEndTime` are seconds on the player's `AudioContext` clock. Use those times directly with the same audio clock, or translate them before passing them to a synth on a different clock. The callback starts after `play()` returns its handle. Calling `stop()` in the callback stops further callbacks immediately. A thrown callback error stops playback and surfaces as an uncaught error from the scheduler.
+`onNote` receives a `ScheduledNote` when Web Audio schedules the oscillator, up to 150 ms ahead. `audioStartTime` and `audioEndTime` are seconds on the player's `AudioContext` clock. Use those times directly with the same audio clock, or translate them before passing them to a synth on a different clock. The callback starts after `play()` returns its handle. Calling `stop()` in the callback stops further callbacks immediately.
+
+Scheduling continues while a callback promise is pending. A synchronous throw or a rejected callback promise stops the playback that invoked the callback and surfaces as an uncaught browser error. A rejection from an earlier playback leaves its replacement playing.
 
 `muted` starts the listed voice buses at zero gain. Muted voices still schedule oscillators and emit `onNote`, so restoring a sustained voice keeps its original timing. `voice`, `muted`, and `setVoiceMuted` accept either the voice ID or its display name. During a solo, the initial and live mute settings apply to the selected voice. Other labels raise `RangeError`.
 

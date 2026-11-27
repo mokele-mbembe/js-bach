@@ -25,7 +25,7 @@ export interface ScheduledNote extends PerformanceEvent {
 export interface PlayOptions {
   /** Voice IDs whose gains start at zero. Their notes are still scheduled. */
   muted?: readonly string[];
-  /** Called when scheduling a note within the 150 ms lookahead, including muted notes. */
+  /** Called within the 150 ms lookahead, including for muted notes. A rejected callback stops playback. */
   onNote?: (note: ScheduledNote) => void;
 }
 
@@ -139,8 +139,15 @@ export function playPerformance(
         const output = voiceId === undefined ? master : voiceGains.get(voiceId)?.node ?? master;
         const audioStartTime = Math.max(now, onset);
         schedule(midiPitch, audioStartTime, end, output);
-        onNote?.({ midiPitch, startSeconds, endSeconds, voiceId: voiceId ?? null, scoreVoice: voice,
+        const result: unknown = onNote?.({ midiPitch, startSeconds, endSeconds, voiceId: voiceId ?? null, scoreVoice: voice,
           audioStartTime, audioEndTime: end });
+        if (result !== null && (typeof result === "object" || typeof result === "function")) {
+          // Observe returned promises without pausing the lookahead loop.
+          void Promise.resolve(result).catch((error: unknown) => {
+            stop();
+            queueMicrotask(() => { throw error; });
+          });
+        }
       }
 
       if (!stopped && context.currentTime >= start + performance.durationSeconds) {
