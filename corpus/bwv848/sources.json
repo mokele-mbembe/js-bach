@@ -36,6 +36,15 @@
       "id": "bwv848-fugue",
       "kind": "fugue",
       "title": "Fugue in C-sharp major",
+      "voices": [
+        { "name": "Soprano", "ids": ["1"] },
+        { "name": "Alto", "ids": ["2", "6"] },
+        { "name": "Bass", "ids": ["5", "7", "8"] }
+      ],
+      "voiceOverrides": [
+        { "scoreVoice": "6", "measures": ["7"], "voiceId": "bass" },
+        { "scoreVoice": "5", "measures": ["41", "42", "43"], "voiceId": "alto" }
+      ],
       "score": {
         "file": "fugue.mxl",
         "edition": "Noctave",

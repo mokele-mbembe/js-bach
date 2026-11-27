@@ -4,12 +4,11 @@ import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node
 import { resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { brotliCompressSync, constants } from "node:zlib";
-import { toPerformance } from "../src/performance.js";
-import { decodePlayback, type PlaybackAsset } from "../src/playback-asset.js";
+import { decodePlayback, encodePlayback, type PlaybackAsset } from "../src/playback-asset.js";
 import { encodeRhythmTemplates, expandRhythmTemplates } from "../src/rhythm-templates.js";
 import { encodeTransposedFragments, expandTransposedFragments, type TransposedScore } from "../src/transposed-fragments.js";
 import { currentCorpus, publishCorpus } from "./corpus-output.js";
-import { movements, readMovementScore, works } from "./corpus.js";
+import { movements, performanceForMovement, readMovementScore, works } from "./corpus.js";
 
 const brotli = {
   quality: 11,
@@ -106,28 +105,23 @@ const scores = movements.map((movement) => {
 
   const work = catalog.get(bwv);
   assert.ok(work, `Missing catalog entry for BWV ${bwv}`);
-  const { durationSeconds, notes } = toPerformance(original);
-  const voiceIds = [...new Set(notes.map((note) => note.voice))];
-  const { kind, key, voices } = movement;
+  const performance = performanceForMovement(original, movement);
+  const { kind, key, voices, voiceOverrides } = movement;
+  const scopedScoreVoices = voiceOverrides && [...new Set(voiceOverrides.map(({ scoreVoice }) => scoreVoice))];
   const { edition, source, license, licenseUrl, upstream } = input;
   const midi = movement.referenceMidi;
   const fragments = transposed.transposedFragments ?? [];
   const playback: PlaybackAsset = {
     work,
     source: {
-      id, kind, title, key, voices,
+      id, kind, title, key, voices, scopedScoreVoices,
       score: {
         edition, source, license, licenseUrl, upstream, attribution: input.attribution,
         changes: `Converted from ${edition} MusicXML to js-bach playback data.`,
       },
       referenceMidi: { typesetter: midi.typesetter, edition: midi.edition, source: midi.source },
     },
-    performance: {
-      durationSeconds,
-      voices: voiceIds,
-      notes: notes.map(({ midiPitch, startSeconds, endSeconds, voice }) =>
-        [midiPitch, startSeconds, endSeconds, voiceIds.indexOf(voice)]),
-    },
+    performance: encodePlayback(performance, voices),
     sizes: comparison,
     analysis: {
       rhythm: {
@@ -149,7 +143,7 @@ const scores = movements.map((movement) => {
   };
   const playbackJson = JSON.stringify(playback);
   const decoded: PlaybackAsset = JSON.parse(playbackJson);
-  assert.deepEqual(decodePlayback(decoded.performance), { durationSeconds, notes }, `${id} changed during playback packing`);
+  assert.deepEqual(decodePlayback(decoded), performance, `${id} changed during playback packing`);
   console.log(`${id} — ${original.measures.length} measures verified, playback ${Buffer.byteLength(playbackJson, "utf8")} B, Brotli event stream ${comparison.eventStream.brotliBytes} B, rhythm ${comparison.rhythmEncoding.brotliBytes} B, transposition ${comparison.transposedEncoding.brotliBytes} B${cached === undefined ? "" : " (cached search)"}`);
   const cacheRecord = `${cacheKey} ${sha256(transposedJson)}\n${transposedJson}`;
   return { id, bwv, title, playbackJson, cacheRecord, cacheHit: cached !== undefined, sizes: comparison };

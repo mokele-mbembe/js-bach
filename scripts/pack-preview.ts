@@ -57,8 +57,8 @@ try {
   }
 
   const sourceFiles = ["LICENSE", "README.md", "package.json", "package-lock.json", "tsconfig.json",
-    "demo/index.html", "demo/demo.css", "demo/main.ts", "docs/mvp.md", "docs/npm-preview.md"];
-  for (const directory of ["src", "scripts", "test"]) {
+    "demo/index.html", "demo/demo.css", "docs/mvp.md", "docs/npm-preview.md"];
+  for (const directory of ["src", "scripts", "test", "demo"]) {
     sourceFiles.push(...readdirSync(join(root, directory)).filter((file) => file.endsWith(".ts")).map((file) => `${directory}/${file}`));
   }
 
@@ -95,15 +95,17 @@ try {
     "const movements = new Map([",
     ...browserMovements,
     "]);",
-    "export const { play, stop } = createBrowserPlayer((id) => movements.get(id));",
+    "export const { play, stop, getVoices, getPerformance } = createBrowserPlayer((id) => movements.get(id));",
     "",
   ].join("\n"));
   writeFileSync(join(stage, browserTypes), [
     `import type { BrowserPlayer } from "./src/browser-player.js";`,
-    `export type { BrowserPlayer, PlayOptions } from "./src/browser-player.js";`,
-    `export type { Playback } from "./src/oscillator-player.js";`,
+    `export type { BrowserPlayer, MovementOptions, PlayOptions, PerformanceEvent, PerformanceTimeline, Voice } from "./src/browser-player.js";`,
+    `export type { Playback, MixedPlayback } from "./src/oscillator-player.js";`,
     `export declare const play: BrowserPlayer["play"];`,
     `export declare const stop: BrowserPlayer["stop"];`,
+    `export declare const getVoices: BrowserPlayer["getVoices"];`,
+    `export declare const getPerformance: BrowserPlayer["getPerformance"];`,
     "",
   ].join("\n"));
   writeFileSync(join(stage, "SCORE-LICENSES.md"), `${notices.join("\n")}\n`);

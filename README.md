@@ -12,7 +12,9 @@ npm ci
 npm run demo
 ```
 
-Open the local player and select Prelude or Fugue for any work in The Well-Tempered Clavier, Book I (BWV 846–869), or for the first eight works in Book II (BWV 870–877). The BWV 846 and 847 fugues also offer solos that start at the selected voice’s first entry and preserve its later rests. Changing the work, movement, or voice stops the current playback. [Local player](http://127.0.0.1:4173/)
+Open the local player and select Prelude or Fugue for any work in The Well-Tempered Clavier, Book I (BWV 846–869), or for the first eight works in Book II (BWV 870–877). The BWV 846–848 fugues offer solos that start at the selected voice’s first entry and preserve its later rests. Changing the work, movement, or solo selection stops the current playback. [Local player](http://127.0.0.1:4173/)
+
+In BWV 846–848, choose **Fugue → All voices** to see the parts on one piano roll. The voice mixer mutes or restores a part while playback continues. The dashed markers identify the opening subject and answer entrances. [Ebenezer Prout's analysis, Fugues 1–3](https://waltercosand.com/CosandScores/Composers%20L-P/Composers_P/Prout%2C%20Ebenezer/Prout-Analysis_of_Bach%27s_48_Fugues.pdf)
 
 The player follows simple written repeats, joins tied notes across measures, and schedules triangle oscillators with Web Audio. At a repeat jump, a tie continues when the next performed measure supplies its matching continuation. A tie stop whose start was skipped sounds as a new note. Playback uses the selected score's tempo and plays the main written notes at ornaments. The Score IR preserves grace notes as zero-duration events, which the demo skips during playback. [Performance conversion](src/performance.ts) · [Web Audio scheduler](src/oscillator-player.ts)
 
@@ -40,6 +42,8 @@ document.querySelector("#stop").addEventListener("click", stop);
 ```
 
 The first call starts the prelude and downloads its playback data on demand. To hear just the alto of the BWV 846 fugue, call `play("bwv846", { movement: "fugue", voice: "Alto" })`. [Browser API and installed preview guide](docs/npm-preview.md)
+
+The locally built package also exports `getVoices` and `getPerformance` for voice controls and visualization. `play` returns a handle with `setVoiceMuted` for movements with named voices. [Programmable voices](docs/npm-preview.md#programmable-voices)
 
 ## Pack the npm preview
 
@@ -95,6 +99,8 @@ Omit the BWV numbers to check every work's attack baseline. The build reuses eac
 GitHub Actions restores only those search records for verification and Pages builds. Successful branch pushes can save them in GitHub's branch-scoped cache, and pull requests only restore them. For a cold Pages rebuild on `main`, manually run **Deploy browser demo** with **Recompute all transposition searches** enabled. The npm publish workflow always runs cold verification. The comparison table is attached to the verification run.
 
 The build writes one playback JSON per movement, the catalog, the comparison report, and the local manifest snapshots and transposition cache to a new directory under `dist/corpus/builds/`. It atomically updates `dist/corpus/current` once every file is ready. Older directories remain available to running demos. The importer accepts the pitched, single-part MusicXML 3.1 and 4.0 subsets used by the corpus. For works published in a single MusicXML archive, the manifest gives the measure ranges for the two movements. Score IR uses integer ticks and retains each note’s written pitch, voice, staff, ties, and notation marks. The build expands repeats and joins ties once when producing playback data, then checks that decoding the playback file preserves each note’s exact timing, pitch, and voice. [MVP plan](docs/mvp.md)
+
+For the fugues with voice groups, the manifest maps exported labels to musical voices. `voiceOverrides` records cases where the same exported label belongs to a different musical voice in specific written measures. The BWV 847 and 848 assignments were checked against the three independently written lines in the credited Mutopia engravings. A tied note keeps the export label of its attack, and the build checks that the continuation stays in the same musical voice. [BWV 847 engraving](https://www.mutopiaproject.org/ftp/BachJS/BWV847/fuga2/fuga2.ly) · [BWV 848 engraving](https://www.mutopiaproject.org/ftp/BachJS/BWV848/bwv848b/bwv848b.ly)
 
 The tests check the original file hashes and compare distinct metered `(start tick, MIDI pitch)` pairs against the upstream reference MIDI using its repeat order. The Score IR keeps repeat marks on their written measures. The manifests record expected differences from overlapping notes, realized ornaments, played grace notes, an arpeggiated chord, and reattacks at written ties. The BWV 876 and 877 preludes also pin each shifted attack to its exact written tick, MIDI tick, and pitch. The BWV 870 fugue's reference MIDI contains a redundant note-off, which the audit reports separately. The BWV 852 prelude also pins the 15 attacks omitted from the PDMX MIDI and verified against the printed OpenWTC edition in measures 63–64. [Importer tests](test/import-mxl.test.ts) · [OpenWTC printed edition](https://upload.wikimedia.org/wikipedia/commons/d/d8/J.S._Bach_-_The_Well-Tempered_Clavier%2C_Book_1_-_OpenWTC.pdf#page=58)
 

@@ -9,6 +9,7 @@ export interface PerformanceNote {
   endSeconds: number;
   midiPitch: number;
   voice: string;
+  voiceId?: string;
 }
 
 export interface Performance {
@@ -21,9 +22,12 @@ interface NoteSpan {
   endTick: number;
   midiPitch: number;
   voice: string;
+  voiceId?: string;
 }
 
-function joinTies(score: ScoreIR): NoteSpan[] {
+type ResolveVoice = (measure: string, scoreVoice: string) => string | undefined;
+
+function joinTies(score: ScoreIR, resolveVoice?: ResolveVoice): NoteSpan[] {
   const segments = score.measures.flatMap((measure) => measure.events.flatMap((event) =>
     event.kind === "note" && !event.grace
       ? [{ ...event, measure: measure.number, startTick: measure.startTick + event.offsetTicks }]
@@ -35,6 +39,7 @@ function joinTies(score: ScoreIR): NoteSpan[] {
 
   for (const { startTick, durationTicks, pitch, voice, measure, tieStart, tieStop } of segments) {
     const endTick = startTick + durationTicks;
+    const voiceId = resolveVoice?.(measure, voice);
     let span: NoteSpan;
     if (tieStop) {
       const key = tieKey(startTick, pitch);
@@ -44,12 +49,15 @@ function joinTies(score: ScoreIR): NoteSpan[] {
       if (!continuations || previousVoice === undefined || !previous) {
         throw new Error(`Unmatched tie continuation in measure ${measure}, voice ${voice}`);
       }
+      if (previous.voiceId !== voiceId) {
+        throw new Error(`Tie changes musical voice in measure ${measure}, score voice ${voice}`);
+      }
       continuations.delete(previousVoice);
       if (continuations.size === 0) pending.delete(key);
       previous.endTick = endTick;
       span = previous;
     } else {
-      span = { startTick, endTick, midiPitch: midiPitch(pitch), voice };
+      span = { startTick, endTick, midiPitch: midiPitch(pitch), voice, ...(voiceId === undefined ? {} : { voiceId }) };
       spans.push(span);
     }
 
@@ -89,10 +97,10 @@ function scoreClock({ ticksPerQuarter, tempoChanges }: ScoreIR): (tick: number) 
   };
 }
 
-export function toPerformance(writtenScore: ScoreIR): Performance {
+export function toPerformance(writtenScore: ScoreIR, resolveVoice?: ResolveVoice): Performance {
   const score = expandWrittenRepeats(writtenScore);
   const secondsAt = scoreClock(score);
-  const notes = joinTies(score).map(({ startTick, endTick, ...note }) => ({
+  const notes = joinTies(score, resolveVoice).map(({ startTick, endTick, ...note }) => ({
     ...note,
     startSeconds: secondsAt(startTick),
     endSeconds: secondsAt(endTick),

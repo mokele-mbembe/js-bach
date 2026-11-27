@@ -64,6 +64,39 @@ button:enabled:hover { filter: brightness(1.16); }
 button:disabled { opacity: 0.48; cursor: default; }
 #status { margin-inline-start: 0.35rem; color: var(--muted); font-size: 0.9rem; }
 
+.polyphony { margin-top: 1.75rem; }
+.polyphony h2 { margin: 0 0 0.85rem; font: 1.65rem Georgia, serif; }
+.polyphony canvas {
+  display: block;
+  width: 100%;
+  height: clamp(15rem, 45vw, 19rem);
+  margin-top: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.375rem;
+}
+.mute-choices span::before, #fugue-entrances li::before {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-inline-end: 0.45rem;
+  border-radius: 50%;
+  background: var(--voice-color);
+  content: "";
+}
+.mute-choices input:checked + span { background: #203530; color: var(--muted); }
+.mute-choices input:checked + span::before { opacity: 0.3; }
+#fugue-entrances:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.1rem;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .encoding { margin-top: 1.75rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--line); }
 .encoding h2 { margin: 0 0 0.35rem; font: 1.65rem Georgia, serif; }
 .encoding h3 { margin: 1.25rem 0 0.5rem; font-size: 1rem; }

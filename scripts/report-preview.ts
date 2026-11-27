@@ -17,13 +17,18 @@ interface PackedPreview {
 }
 
 declare global {
-  interface Window { jsBachOscillatorStarts: number }
+  interface Window {
+    jsBachOscillatorStarts: number;
+    jsBachVoiceGainChanges: { bus: number; target: number }[];
+  }
 }
 
 const entry = "dist/scripts/serve-demo.js";
 const catalog = "/corpus/catalog.json";
 const prelude = "/corpus/bwv846/bwv846-prelude.playback.json";
 const fugue = "/corpus/bwv846/bwv846-fugue.playback.json";
+const fugue847 = "/corpus/bwv847/bwv847-fugue.playback.json";
+const fugue848 = "/corpus/bwv848/bwv848-fugue.playback.json";
 const repeatPrelude = "/corpus/bwv869/bwv869-prelude.playback.json";
 
 async function measure(requests: Request[]) {
@@ -51,10 +56,18 @@ async function checkDemo(address: string, packageRoot: string) {
     page.setDefaultTimeout(10_000);
     await page.addInitScript(() => {
       window.jsBachOscillatorStarts = 0;
+      window.jsBachVoiceGainChanges = [];
       const start = OscillatorNode.prototype.start;
       OscillatorNode.prototype.start = function (when) {
         start.call(this, when);
         window.jsBachOscillatorStarts++;
+      };
+      const buses = new WeakMap<AudioParam, number>();
+      const setTarget = AudioParam.prototype.setTargetAtTime;
+      AudioParam.prototype.setTargetAtTime = function (target, time, timeConstant) {
+        if (!buses.has(this)) buses.set(this, window.jsBachVoiceGainChanges.length);
+        window.jsBachVoiceGainChanges.push({ bus: buses.get(this)!, target });
+        return setTarget.call(this, target, time, timeConstant);
       };
     });
     const requests: Request[] = [];
@@ -66,23 +79,70 @@ async function checkDemo(address: string, packageRoot: string) {
     await play(page, "Prelude");
     assert.deepEqual(scorePaths(), [catalog, prelude], "Cold playback should request only the catalog and BWV 846 prelude");
     const [firstPlay, firstScore] = await Promise.all([measure(requests.slice()), measure(scoreRequests())]);
+    assert.ok(requests.every((request) => !request.url().endsWith("/demo/polyphony.js")),
+      "The piano roll should load only when its fugue is selected");
 
     await page.getByText("Fugue", { exact: true }).click();
+    const panel = page.locator("#polyphony");
+    await panel.waitFor();
+    assert.equal(await panel.getByRole("checkbox").count(), 4);
+    assert.equal(await panel.locator("#fugue-entrances li").count(), 4);
+    await play(page, "Fugue");
+    const timeline = () => page.locator("#progress").evaluate((progress: HTMLProgressElement) => ({
+      value: progress.value, max: progress.max,
+    }));
+    await page.waitForFunction(() => document.querySelector<HTMLProgressElement>("#progress")!.value > 0.5);
+    const beforeMute = await timeline();
+    await panel.getByText("Mute Alto", { exact: true }).click();
+    assert.ok(await panel.getByRole("checkbox", { name: "Mute Alto" }).isChecked());
+    const muted = await timeline();
+    assert.ok(muted.value >= beforeMute.value);
+    await page.waitForFunction((value) => document.querySelector<HTMLProgressElement>("#progress")!.value > value, muted.value);
+    await panel.getByText("Mute Alto", { exact: true }).click();
+    assert.ok(!await panel.getByRole("checkbox", { name: "Mute Alto" }).isChecked());
+    assert.equal(await page.locator("#status").textContent(), "Playing Fugue");
+    const afterRestore = await timeline();
+    assert.ok(afterRestore.value > muted.value);
+    assert.equal(afterRestore.max, beforeMute.max);
+    assert.deepEqual(await page.evaluate(() => window.jsBachVoiceGainChanges), [{ bus: 0, target: 0 }, { bus: 0, target: 1 }]);
+    await page.locator("#stop").click();
+
     for (const voice of ["Soprano", "Alto", "Tenor", "Bass"]) {
       await page.getByText(voice, { exact: true }).click();
+      assert.ok(!await panel.isVisible());
       await play(page, `Fugue · ${voice}`);
       await page.locator("#stop").click();
       await page.getByText("Stopped", { exact: true }).waitFor();
     }
     assert.deepEqual(scorePaths(), [catalog, prelude, fugue], "The fugue and voice changes should share one payload");
 
+    await page.locator("#works").getByText(/^BWV 847 · /).click();
+    await panel.getByRole("heading", { name: /BWV 847 fugue/i }).waitFor();
+    const bass = panel.getByRole("checkbox", { name: "Mute Bass" });
+    await panel.getByText("Mute Bass", { exact: true }).click();
+    assert.ok(await bass.isChecked());
+    await play(page, "Fugue");
+    const preMuted = await timeline();
+    assert.ok(preMuted.max > 97 && preMuted.max < 98, "Muting bass should preserve the full BWV 847 timeline");
+    await page.waitForFunction((value) => document.querySelector<HTMLProgressElement>("#progress")!.value > value, preMuted.value);
+    assert.deepEqual(await page.evaluate(() => window.jsBachVoiceGainChanges.slice(2).map(({ target }) => target)), [0]);
+
+    await page.locator("#works").getByText(/^BWV 848 · /).click();
+    await panel.getByRole("heading", { name: /BWV 848 fugue/i }).waitFor();
+    assert.ok(!await bass.isChecked(), "Mute selections should belong to the current movement");
+    assert.ok(await page.locator("#stop").isDisabled(), "Switching works should stop the old playback");
+    assert.equal((await timeline()).value, 0);
+
+    await page.locator("#works").getByText(/^BWV 846 · /).click();
+    await panel.getByRole("heading", { name: /BWV 846 fugue/i }).waitFor();
     await page.getByText("Prelude", { exact: true }).click();
     await page.locator("#works").getByText(/^BWV 869 · /).click();
     await play(page, "Prelude");
     await page.locator("#stop").click();
     await page.locator("#works").getByText(/^BWV 846 · /).click();
     await play(page, "Prelude");
-    assert.deepEqual(scorePaths(), [catalog, prelude, fugue, repeatPrelude], "Work changes should fetch only the current movement and cache prior loads");
+    assert.deepEqual(scorePaths(), [catalog, prelude, fugue, fugue847, fugue848, repeatPrelude],
+      "Work changes should fetch only the current movement and cache prior loads");
     await checkPreviewRaces(browser, address);
     await checkBrowserApi(browser, address, packageRoot);
     return { firstPlay, firstScore };
@@ -140,8 +200,8 @@ try {
       "| First play | Requests | Response body bytes | Response bytes with headers |", "| --- | ---: | ---: | ---: |",
       `| Playwright-observed page requests | ${firstPlay.count} | ${firstPlay.body} | ${firstPlay.transfer} |`,
       `| Catalog and movement | ${firstScore.count} | ${firstScore.body} | ${firstScore.transfer} |`, "",
-      "Playback checks covered lazy switches, cached return, all four BWV 846 fugue voices, selection during a delayed catalog load, and cancellation during rapid switches.",
-      "The packaged browser API passed Node import and TypeScript declaration checks, and Chromium verified lazy movement loading, playback, voice selection, stopping, and cancellation.", "",
+      "Playback checks covered the lazy piano rolls for BWV 846–848, live mute and restore, full-movement timing, all four BWV 846 solos, and rapid switches.",
+      "The packaged browser API passed Node import, read-only voice and event queries including the BWV 848 tie across source voice IDs, and TypeScript declaration checks. Chromium verified playback, voice selection, stopping, and cancellation.", "",
     ].join("\n");
     writeFileSync(join(dirname(metadata), "size-report.md"), report);
     if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, report);

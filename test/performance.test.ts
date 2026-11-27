@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { writeMidi, type MidiEvent } from "midi-file";
-import { movements, readCorpusFile, readMovementScore } from "../scripts/corpus.js";
+import { getFugueEntrances } from "../demo/fugue-entrances.js";
+import { movements, performanceForMovement, readCorpusFile, readMovementScore } from "../scripts/corpus.js";
 import { compareSourceAttacks } from "../scripts/source-attacks.js";
 import { importMusicXml, importMxl } from "../src/import-mxl.js";
 import { soloVoice, toPerformance } from "../src/performance.js";
+import { performanceTimeline, soloMusicalVoice } from "../src/playback-asset.js";
 import { getScoreAttacks, type ScoreIR } from "../src/score-ir.js";
 import { expandWrittenRepeats } from "../src/score-repeats.js";
 
@@ -142,34 +144,105 @@ test("a cross-staff continuation stays one note across a tempo change", () => {
   });
 });
 
-test("the BWV 848 fugue sustains C-sharp 4 when its exported voice ID changes at measure 52", () => {
+test("the BWV 848 fugue exposes one C-sharp 4 event when its exported voice ID changes at measure 52", () => {
   const movement = movements.find(({ id }) => id === "bwv848-fugue");
   assert.ok(movement);
   const score = importMxl(readCorpusFile(movement.score));
   const boundary = score.measures[51].startTick;
   const startSeconds = expectedNanoseconds(score, boundary - 2) / 1e9;
   const endSeconds = expectedNanoseconds(score, boundary + 1) / 1e9;
-  const spans = toPerformance(score).notes.filter((note) =>
+  const [attack, continuation] = score.measures.slice(50, 52).flatMap(({ events }) => events.filter((note) =>
+    note.kind === "note" && note.pitch.step === "C" && note.pitch.alter === 1 && note.pitch.octave === 4 &&
+    (note.tieStart || note.tieStop),
+  ));
+  assert.deepEqual([attack.voice, continuation.voice], ["2", "6"]);
+  const timeline = performanceTimeline(performanceForMovement(score, movement));
+  const spans = timeline.notes.filter((note) =>
     note.midiPitch === 61 && note.startSeconds >= startSeconds && note.startSeconds < endSeconds,
   );
-  assert.deepEqual(spans, [{ midiPitch: 61, voice: "2", startSeconds, endSeconds }]);
+  assert.deepEqual(spans, [{ midiPitch: 61, voiceId: "alto", scoreVoice: "2", startSeconds, endSeconds }]);
+  assert.ok(Object.isFrozen(timeline) && Object.isFrozen(timeline.notes) && Object.isFrozen(spans[0]));
+  assert.throws(() => performanceForMovement(score, {
+    ...movement,
+    voiceOverrides: [...movement.voiceOverrides!, { scoreVoice: "6", measures: ["52"], voiceId: "bass" }],
+  }), /Tie changes musical voice in measure 52, score voice 6/);
 });
 
-test("the BWV 847 fugue solos three musical voices across the exported voice IDs", () => {
-  const movement = movements.find(({ id }) => id === "bwv847-fugue");
-  assert.ok(movement?.voices);
-  const score = toPerformance(importMxl(readCorpusFile(movement.score)));
-  assert.deepEqual(movement.voices.map(({ name }) => name), ["Soprano", "Alto", "Bass"]);
-  const allIds = movement.voices.flatMap(({ ids }) => ids);
-  assert.equal(allIds.length, new Set(allIds).size);
-  assert.deepEqual(new Set(allIds), new Set(score.notes.map(({ voice }) => voice)));
+const scopedVoiceCases = [
+  {
+    id: "bwv847-fugue",
+    counts: { soprano: 266, alto: 252, bass: 236 },
+    attacks: [
+      [160, "6", 39, "bass"], // Measure 11
+      [178, "6", 56, "alto"], // Measure 12, coincident with the bass attack below
+      [178, "5", 53, "bass"],
+      [224, "2", 55, "alto"], // Measure 15, still on the lower staff
+    ],
+    entries: [
+      [1, "alto", "subject", 72, 2],
+      [3, "soprano", "answer", 79, 34],
+      [7, "bass", "subject", 60, 98],
+    ],
+  },
+  {
+    id: "bwv848-fugue",
+    counts: { soprano: 577, alto: 457, bass: 382 },
+    attacks: [
+      [96, "6", 49, "bass"], // Measure 7
+      [176, "6", 60, "alto"], // Measure 12
+      [640, "5", 63, "alto"], // Measure 41
+      [672, "5", 58, "alto"], // Measure 43
+      [688, "5", 53, "bass"], // Measure 44
+    ],
+    entries: [
+      [1, "soprano", "subject", 68, 6],
+      [3, "alto", "answer", 61, 38],
+      [5, "bass", "subject", 56, 70],
+    ],
+  },
+] as const;
 
-  const { ids } = movement.voices[2];
-  const bass = soloVoice(score, ids);
-  assert.deepEqual(new Set(bass.notes.map(({ voice }) => voice)), new Set(["5", "6", "7", "8", "9", "10"]));
-  assert.equal(bass.notes[0].startSeconds, 0);
-  assert.equal(bass.notes[0].midiPitch, 60);
-});
+for (const { id, counts, attacks, entries } of scopedVoiceCases) {
+  test(`${id} assigns scoped voice changes without changing the performance timeline`, () => {
+    const movement = movements.find((movement) => movement.id === id);
+    assert.ok(movement?.voices);
+    const score = readMovementScore(movement);
+    const performance = performanceForMovement(score, movement);
+    const rawPerformance = toPerformance(score);
+    assert.equal(performance.durationSeconds, rawPerformance.durationSeconds);
+    assert.deepEqual(performance.notes.map(({ voiceId, ...note }) => note), rawPerformance.notes);
+    const timeline = performanceTimeline(performance);
+    for (const [tick, scoreVoice, midiPitch, voiceId] of attacks) {
+      const matching = timeline.notes.filter((note) => note.scoreVoice === scoreVoice && note.midiPitch === midiPitch &&
+        Math.round(note.startSeconds * 1e9) === expectedNanoseconds(score, tick));
+      assert.deepEqual(matching.map((note) => note.voiceId), [voiceId], `${scoreVoice} at tick ${tick}`);
+    }
+
+    assert.equal(timeline.notes.length, counts.soprano + counts.alto + counts.bass);
+    for (const [voiceId, count] of Object.entries(counts)) {
+      const fullVoice = timeline.notes.filter((note) => note.voiceId === voiceId);
+      assert.equal(fullVoice.length, count);
+      const firstEntry = fullVoice[0].startSeconds;
+      const lastRelease = Math.max(...fullVoice.map(({ endSeconds }) => endSeconds));
+      assert.deepEqual(soloMusicalVoice(performance, voiceId), {
+        notes: fullVoice.map(({ scoreVoice, midiPitch, startSeconds, endSeconds }) => ({
+          voice: scoreVoice,
+          voiceId,
+          midiPitch,
+          startSeconds: startSeconds - firstEntry,
+          endSeconds: endSeconds - firstEntry,
+        })),
+        durationSeconds: lastRelease - firstEntry,
+      });
+    }
+
+    assert.deepEqual(getFugueEntrances(id, timeline.notes)
+      .map(({ measure, voiceId, kind, midiPitch, startSeconds }) =>
+        [measure, voiceId, kind, midiPitch, Math.round(startSeconds * 1e9)]),
+    entries.map(([measure, voiceId, kind, midiPitch, tick]) =>
+      [measure, voiceId, kind, midiPitch, expectedNanoseconds(score, tick)]));
+  });
+}
 
 test("an orphan tie continuation reports its measure and voice", () => {
   const source = importMusicXml(`
