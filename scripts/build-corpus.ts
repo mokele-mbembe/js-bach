@@ -106,8 +106,10 @@ const scores = movements.map((movement) => {
   const work = catalog.get(bwv);
   assert.ok(work, `Missing catalog entry for BWV ${bwv}`);
   const performance = performanceForMovement(original, movement);
-  const { kind, key, voices, voiceOverrides } = movement;
-  const scopedScoreVoices = voiceOverrides && [...new Set(voiceOverrides.map(({ scoreVoice }) => scoreVoice))];
+  const { kind, key, voices, voiceOverrides, noteOverrides } = movement;
+  const scopedScoreVoices = voiceOverrides || noteOverrides
+    ? [...new Set([...(voiceOverrides ?? []), ...(noteOverrides ?? [])].map(({ scoreVoice }) => scoreVoice))]
+    : undefined;
   const { edition, source, license, licenseUrl, upstream } = input;
   const midi = movement.referenceMidi;
   const fragments = transposed.transposedFragments ?? [];
