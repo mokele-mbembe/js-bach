@@ -83,6 +83,21 @@ The audit compares MIDI against the performed repeat order by default. Set `refe
 
 The audit downloads the files into `dist/source-audit/bwv*/` and writes `attack-diff.md` and `attack-diff.json` with the calculated SHA-256 values, exact attack differences, possible notation matches, and separate license evidence for the MusicXML and MIDI. Use filenames that are unique even when compared without regard to case. In a batch, the command writes reports for successful candidates and exits with an error if any candidate failed. It verifies the PDMX v9 release files against their published sizes and MD5 checksums before caching them under `dist/source-audit/cache/`. The first audit using PDMX MusicXML also downloads the 1.9 GB MusicXML archive. Confirm the edition, redistribution terms, and explanations for differences before creating the final corpus manifest. [PDMX v9 release](https://zenodo.org/records/15571083)
 
+### Audit musical voices
+
+Run `audit:voices` with `curl` on your `PATH` to compare a corpus movement with a voice-separated engraving.
+
+```sh
+npm run audit:voices -- bwv849-fugue
+npm run audit:voices -- bwv867-fugue
+```
+
+The command writes `voice-audit.md` and `voice-audit.json` in a new directory under `dist/voice-audit/`. It compares written onset, duration, and MIDI pitch on a common integer tick grid, preserving simultaneous unisons and written tie continuations. The report distinguishes direct matches, assignments inferred from unison context, unresolved unisons, and differences in note multiplicity. It flags score labels that identify different musical voices within one measure, including cases at the same onset. When the full assignment fits the current manifest format, the command also checks that the playback compiler accepts it and preserves the performed note spans. Use the report to review the score before editing its manifest.
+
+BWV 849 uses the credited Mutopia engraving. BWV 867 uses the five-staff BWV 867 engraving from Kyle Rother's Book I archive. The presets verify the downloaded SHA-256 checksums. [Mutopia](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=596) · [University of Cape Town](https://open.uct.ac.za/items/d2a6887b-7196-4fbe-8b56-a469bf557f93)
+
+To check a different corpus movement, pass `--reference <config.json>`. The config gives `source`, `credit`, `license`, and a `voices` object mapping LilyPond variables to musical voice IDs. Supply either `download` or a `file` path relative to the config. Use `archiveMember` for a ZIP input, `sha256` to pin the input, and `memberSha256` to pin the extracted file. The reader supports selected, inline `\relative` voice lines with explicit starting pitches and written notes, rests, skips, and ties. Unsupported LilyPond notation produces an error.
+
 ### Verify and build
 
 Check just the works you are reviewing, then regenerate the complete comparison and demo data.
