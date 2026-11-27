@@ -244,6 +244,35 @@ for (const { id, counts, attacks, entries } of scopedVoiceCases) {
   });
 }
 
+test("the BWV 849 fugue assigns five musical voices without changing the performance", () => {
+  const movement = movements.find(({ id }) => id === "bwv849-fugue");
+  assert.ok(movement);
+  const score = readMovementScore(movement);
+  const performance = performanceForMovement(score, movement);
+  assert.deepEqual({
+    ...performance,
+    notes: performance.notes.map(({ voiceId, ...note }) => note),
+  }, toPerformance(score));
+
+  const auditedVoices = [
+    ["soprano", ["3"], 297],
+    ["alto", ["2"], 280],
+    ["tenor", ["1", "7"], 270],
+    ["baritone", ["6"], 236],
+    ["bass", ["5"], 238],
+  ] as const;
+  assert.deepEqual(new Set(performance.notes.map(({ voiceId }) => voiceId)), new Set(auditedVoices.map(([id]) => id)));
+  for (const [id, scoreVoices, count] of auditedVoices) {
+    const notes = performance.notes.filter(({ voiceId }) => voiceId === id);
+    assert.equal(notes.length, count, id);
+    assert.deepEqual(new Set(notes.map(({ voice }) => voice)), new Set(scoreVoices), id);
+  }
+
+  const [baritoneEntry] = soloMusicalVoice(performance, "baritone").notes;
+  assert.equal(baritoneEntry.midiPitch, 56);
+  assert.equal(baritoneEntry.startSeconds, 0);
+});
+
 test("an orphan tie continuation reports its measure and voice", () => {
   const source = importMusicXml(`
     <score-partwise version="4.0"><part id="P1"><measure number="7">

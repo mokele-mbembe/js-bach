@@ -58,7 +58,7 @@ function formatTime(seconds: number): string {
 function showPosition(position: number): void {
   progress.value = position;
   elapsed.textContent = formatTime(position);
-  if (!polyphonyPanel.hidden) polyphony?.setPosition(position);
+  if (!polyphonyPanel.hidden) polyphony?.setPosition(position, playback !== undefined && position > 0);
 }
 
 function setTransport(isPlaying: boolean, message: string): void {
