@@ -7,6 +7,7 @@ import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { chromium, type Page, type Request } from "playwright";
 import { checkBrowserApi } from "./browser-api-check.js";
+import { checkPianoRoll } from "./piano-roll-check.js";
 import { checkPreviewRaces } from "./preview-races.js";
 
 interface PackedPreview {
@@ -145,6 +146,7 @@ async function checkDemo(address: string, packageRoot: string) {
       "Work changes should fetch only the current movement and cache prior loads");
     await checkPreviewRaces(browser, address);
     await checkBrowserApi(browser, address, packageRoot);
+    await checkPianoRoll(browser, address);
     return { firstPlay, firstScore };
   } finally {
     await browser.close();
@@ -200,7 +202,7 @@ try {
       "| First play | Requests | Response body bytes | Response bytes with headers |", "| --- | ---: | ---: | ---: |",
       `| Playwright-observed page requests | ${firstPlay.count} | ${firstPlay.body} | ${firstPlay.transfer} |`,
       `| Catalog and movement | ${firstScore.count} | ${firstScore.body} | ${firstScore.transfer} |`, "",
-      "Playback checks covered the lazy piano rolls for BWV 846–848, live mute and restore, full-movement timing, all four BWV 846 solos, and rapid switches.",
+      "Playback checks covered the lazy piano rolls for BWV 846–849, unison and tied-note highlights during live mute and restore, full-movement timing, solos, and rapid switches.",
       "The packaged browser API passed Node import, read-only voice and event queries including the BWV 848 tie across source voice IDs, and TypeScript declaration checks. Chromium verified playback, voice selection, stopping, and cancellation.", "",
     ].join("\n");
     writeFileSync(join(dirname(metadata), "size-report.md"), report);
