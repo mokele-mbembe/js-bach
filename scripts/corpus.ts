@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { importMxl } from "../src/import-mxl.js";
-import { toPerformance, type Performance } from "../src/performance.js";
+import { toPerformance, type Performance, type ResolveVoice } from "../src/performance.js";
 import { describeVoices } from "../src/playback-asset.js";
-import type { Attack, ScoreIR } from "../src/score-ir.js";
+import { midiPitch, type Attack, type ScoreIR } from "../src/score-ir.js";
 import { sliceScore } from "./score-slice.js";
 import type { MidiReferenceTiming } from "./source-attacks.js";
 
@@ -29,6 +29,14 @@ interface VoiceOverride {
   voiceId: string;
 }
 
+export interface NoteOverride {
+  measure: string;
+  offsetTicks: number;
+  scoreVoice: string;
+  midiPitch: number;
+  voiceId: string;
+}
+
 interface MovementSource {
   id: string;
   kind: "prelude" | "fugue";
@@ -36,6 +44,7 @@ interface MovementSource {
   key?: string;
   voices?: VoiceGroup[];
   voiceOverrides?: VoiceOverride[];
+  noteOverrides?: NoteOverride[];
   score: CorpusFile & { upstream?: string; measureRange?: [start: number, end: number] };
   referenceMidi: CorpusFile & MidiReferenceTiming & { typesetter: string; engraving?: string };
   expected: {
@@ -106,13 +115,20 @@ export function readMovementScore({ bwv, id, title, composer, score: input }: (t
   };
 }
 
-export function performanceForMovement(
+function noteOverrideKey(measure: string, offsetTicks: number, scoreVoice: string, pitch: number): string {
+  return JSON.stringify([measure, offsetTicks, scoreVoice, pitch]);
+}
+
+type MovementVoiceMapping = Pick<MovementSource, "id" | "voices" | "voiceOverrides" | "noteOverrides">;
+
+export function resolveVoiceForMovement(
   score: ScoreIR,
-  { id, voices: groups = [], voiceOverrides = [] }: Pick<MovementSource, "id" | "voices" | "voiceOverrides">,
-): Performance {
+  { id, voices: groups = [], voiceOverrides = [], noteOverrides = [] }: MovementVoiceMapping,
+): ResolveVoice | undefined {
   if (groups.length === 0) {
     assert.equal(voiceOverrides.length, 0, `${id} has voice overrides without voice groups`);
-    return toPerformance(score);
+    assert.equal(noteOverrides.length, 0, `${id} has note overrides without voice groups`);
+    return undefined;
   }
 
   const { voices, byScoreVoice } = describeVoices(groups);
@@ -135,9 +151,30 @@ export function performanceForMovement(
     }
   }
 
-  return toPerformance(score, (measure, scoreVoice) => {
-    const voiceId = overrides.get(measure)?.get(scoreVoice) ?? byScoreVoice.get(scoreVoice);
+  const noteVoices = new Map<string, string>();
+  for (const { measure, offsetTicks, scoreVoice, midiPitch: pitch, voiceId } of noteOverrides) {
+    assert.ok(voiceIds.has(voiceId), `${id} has unknown musical voice ${voiceId}`);
+    const key = noteOverrideKey(measure, offsetTicks, scoreVoice, pitch);
+    const location = `measure ${measure}, offset ${offsetTicks}, score voice ${scoreVoice}, MIDI pitch ${pitch}`;
+    assert.ok(!noteVoices.has(key), `${id} has duplicate note override in ${location}`);
+    const matches = score.measures.filter(({ number }) => number === measure).flatMap(({ events }) => events.filter((event) =>
+      event.kind === "note" && !event.grace && event.durationTicks > 0 && event.voice === scoreVoice &&
+      event.offsetTicks === offsetTicks && midiPitch(event.pitch) === pitch,
+    ));
+    assert.equal(matches.length, 1, `${id} note override in ${location} matched ${matches.length} non-grace metered note segments, expected 1`);
+    noteVoices.set(key, voiceId);
+  }
+
+  return (measure, scoreVoice, note) => {
+    const exact = noteVoices.size > 0 && note.durationTicks > 0
+      ? noteVoices.get(noteOverrideKey(measure, note.offsetTicks, scoreVoice, midiPitch(note.pitch)))
+      : undefined;
+    const voiceId = exact ?? overrides.get(measure)?.get(scoreVoice) ?? byScoreVoice.get(scoreVoice);
     assert.ok(voiceId, `${id} has unassigned score voice ${scoreVoice} in measure ${measure}`);
     return voiceId;
-  });
+  };
+}
+
+export function performanceForMovement(score: ScoreIR, mapping: MovementVoiceMapping): Performance {
+  return toPerformance(score, resolveVoiceForMovement(score, mapping));
 }

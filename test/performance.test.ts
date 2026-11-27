@@ -7,7 +7,7 @@ import { compareSourceAttacks } from "../scripts/source-attacks.js";
 import { importMusicXml, importMxl } from "../src/import-mxl.js";
 import { soloVoice, toPerformance } from "../src/performance.js";
 import { performanceTimeline, soloMusicalVoice } from "../src/playback-asset.js";
-import { getScoreAttacks, type ScoreIR } from "../src/score-ir.js";
+import { getScoreAttacks, midiPitch, type ScoreIR } from "../src/score-ir.js";
 import { expandWrittenRepeats } from "../src/score-repeats.js";
 
 function expectedNanoseconds(score: ScoreIR, tick: number): number {
@@ -166,6 +166,19 @@ test("the BWV 848 fugue exposes one C-sharp 4 event when its exported voice ID c
     ...movement,
     voiceOverrides: [...movement.voiceOverrides!, { scoreVoice: "6", measures: ["52"], voiceId: "bass" }],
   }), /Tie changes musical voice in measure 52, score voice 6/);
+  assert.ok(continuation.kind === "note");
+  const selector = { measure: "52", offsetTicks: continuation.offsetTicks, scoreVoice: "6", midiPitch: 61 };
+  assert.throws(() => performanceForMovement(score, {
+    ...movement, noteOverrides: [{ ...selector, voiceId: "bass" }],
+  }), /Tie changes musical voice in measure 52, score voice 6/);
+  const repaired = performanceTimeline(performanceForMovement(score, {
+    ...movement,
+    voiceOverrides: [...movement.voiceOverrides!, { scoreVoice: "6", measures: ["52"], voiceId: "bass" }],
+    noteOverrides: [{ ...selector, voiceId: "alto" }],
+  }));
+  assert.deepEqual(repaired.notes.filter((note) =>
+    note.midiPitch === 61 && note.startSeconds >= startSeconds && note.startSeconds < endSeconds,
+  ), spans);
 });
 
 const scopedVoiceCases = [
@@ -271,6 +284,118 @@ test("the BWV 849 fugue assigns five musical voices without changing the perform
   const [baritoneEntry] = soloMusicalVoice(performance, "baritone").notes;
   assert.equal(baritoneEntry.midiPitch, 56);
   assert.equal(baritoneEntry.startSeconds, 0);
+});
+
+test("BWV 867's five audited conflicts can be assigned by individual written note", () => {
+  const movement = movements.find(({ id }) => id === "bwv867-fugue");
+  assert.ok(movement);
+  const written = readMovementScore(movement);
+  assert.equal(written.ticksPerQuarter, 4);
+  assert.deepEqual(performanceForMovement(written, movement), toPerformance(written));
+
+  // Direct matches against the pinned Rother engraving, in the MXL tick grid.
+  const conflicts = [
+    ["26", "4", [[0, 65, "mezzo"], [0, 68, "alto"], [8, 62, "mezzo"], [8, 65, "alto"]]],
+    ["46", "2", [[0, 58, "tenor"], [4, 65, "mezzo"], [12, 58, "mezzo"]]],
+    ["70", "1", [[0, 70, "alto"], [0, 73, "soprano"], [4, 69, "alto"], [4, 75, "soprano"],
+      [8, 70, "alto"], [8, 77, "soprano"], [12, 72, "alto"], [12, 75, "soprano"]]],
+    ["71", "1", [[0, 70, "alto"], [0, 73, "soprano"], [4, 69, "alto"], [4, 72, "soprano"]]],
+    ["72", "2", [[0, 65, "mezzo"], [0, 68, "alto"], [4, 63, "mezzo"], [4, 66, "alto"],
+      [8, 61, "mezzo"], [8, 65, "alto"]]],
+  ] as const;
+  const noteOverrides = conflicts.flatMap(([measure, scoreVoice, notes]) =>
+    notes.map(([offsetTicks, midiPitch, voiceId]) => ({ measure, offsetTicks, scoreVoice, midiPitch, voiceId })));
+  // Include the m. 45 start of the held tenor note in m. 46. All unresolved unisons stay outside the fixture.
+  const tenorStart = { measure: "45", offsetTicks: 8, scoreVoice: "2", midiPitch: 58, voiceId: "tenor" } as const;
+  const rules = [tenorStart, ...noteOverrides];
+  const fixture = {
+    ...written,
+    measures: written.measures.map((measure) => ({
+      ...measure,
+      events: measure.events.filter((event) => event.kind === "note" && !event.grace && rules.some((rule) =>
+        rule.measure === measure.number && rule.offsetTicks === event.offsetTicks && rule.scoreVoice === event.voice &&
+        rule.midiPitch === midiPitch(event.pitch),
+      )),
+    })),
+  };
+  const performance = performanceForMovement(fixture, {
+    id: movement.id,
+    voices: ["Soprano", "Alto", "Mezzo", "Tenor", "Bass"].map((name) => ({ name, ids: [] })),
+    noteOverrides: rules,
+  });
+  assert.equal(performance.notes.length, 25);
+  assert.deepEqual({ ...performance, notes: performance.notes.map(({ voiceId, ...note }) => note) }, toPerformance(fixture));
+
+  const nanosecondsAt = (number: string, offset: number) => {
+    const measure = written.measures.find((measure) => measure.number === number);
+    assert.ok(measure);
+    return expectedNanoseconds(written, measure.startTick + offset);
+  };
+  for (const { measure, offsetTicks, scoreVoice, midiPitch, voiceId } of noteOverrides) {
+    const start = measure === "46" && offsetTicks === 0 ? tenorStart : { measure, offsetTicks };
+    const startTime = nanosecondsAt(start.measure, start.offsetTicks);
+    const notes = performance.notes.filter((note) => note.midiPitch === midiPitch && note.voice === scoreVoice &&
+      Math.round(note.startSeconds * 1e9) === startTime);
+    assert.deepEqual(notes.map((note) => note.voiceId), [voiceId], `measure ${measure}, offset ${offsetTicks}, pitch ${midiPitch}`);
+  }
+  const chordStart = nanosecondsAt("26", 0);
+  const firstChord = performance.notes.filter((note) => Math.round(note.startSeconds * 1e9) === chordStart);
+  assert.deepEqual(firstChord.map(({ endSeconds, midiPitch, voiceId }) => [Math.round(endSeconds * 1e9), midiPitch, voiceId]), [
+    [nanosecondsAt("26", 8), 65, "mezzo"], [nanosecondsAt("26", 8), 68, "alto"],
+  ]);
+  const heldTenor = performance.notes.find(({ midiPitch, voiceId }) => midiPitch === 58 && voiceId === "tenor");
+  assert.ok(heldTenor);
+  assert.equal(Math.round(heldTenor.endSeconds * 1e9), nanosecondsAt("46", 4));
+});
+
+test("written note overrides outrank measure and global mappings on each repeat pass", () => {
+  const note = (step: string) => `<note><pitch><step>${step}</step><octave>4</octave></pitch><duration>1</duration><voice>4</voice></note>`;
+  const score = importMusicXml(`<score-partwise version="4.0"><part id="P1">
+    <measure number="1"><attributes><divisions>1</divisions></attributes>
+      <barline location="left"><repeat direction="forward"/></barline>${note("C")}${note("D")}
+    </measure>
+    <measure number="2">${note("E")}<barline location="right"><repeat direction="backward"/></barline></measure>
+    <measure number="3">${note("F")}</measure>
+  </part></score-partwise>`);
+  const performance = performanceForMovement(score, {
+    id: "repeat-voice-overrides",
+    voices: [{ name: "Bass", ids: ["4"] }, { name: "Alto", ids: [] }, { name: "Mezzo", ids: [] }],
+    voiceOverrides: [{ measures: ["1"], scoreVoice: "4", voiceId: "alto" }],
+    noteOverrides: [{ measure: "1", offsetTicks: 0, scoreVoice: "4", midiPitch: 60, voiceId: "mezzo" }],
+  });
+  assert.deepEqual(performance.notes.map(({ startSeconds, midiPitch, voiceId }) => [startSeconds, midiPitch, voiceId]), [
+    [0, 60, "mezzo"], [0.5, 62, "alto"], [1, 64, "bass"],
+    [1.5, 60, "mezzo"], [2, 62, "alto"], [2.5, 64, "bass"], [3, 65, "bass"],
+  ]);
+});
+
+test("note overrides reject missing or ambiguous written segments and duplicate rules", () => {
+  const score = importMusicXml(`<score-partwise version="4.0"><part id="P1"><measure number="1">
+    <attributes><divisions>1</divisions></attributes>
+    <note><pitch><step>C</step><octave>4</octave></pitch><duration>1</duration><voice>4</voice></note>
+  </measure></part></score-partwise>`);
+  const [measure] = score.measures;
+  const [event] = measure.events;
+  assert.ok(event.kind === "note");
+  const rule = { measure: "1", offsetTicks: 0, scoreVoice: "4", midiPitch: 60, voiceId: "alto" };
+  const mapping = { id: "invalid-note-overrides", voices: [{ name: "Alto", ids: ["4"] }], noteOverrides: [rule] };
+  const withMeasureEvents = (...events: typeof measure.events): ScoreIR => ({ ...score, measures: [{ ...measure, events }] });
+
+  for (const selector of [{ measure: "99" }, { offsetTicks: 1 }, { scoreVoice: "5" }, { midiPitch: 61 }]) {
+    assert.throws(() => performanceForMovement(score, { ...mapping, noteOverrides: [{ ...rule, ...selector }] }),
+      /matched 0 non-grace metered note segments/);
+  }
+  const grace = { ...event, durationTicks: 0, grace: { attributes: {} } };
+  assert.throws(() => performanceForMovement(withMeasureEvents(grace), mapping), /matched 0 non-grace metered note segments/);
+  assert.throws(() => performanceForMovement(withMeasureEvents({ ...event, durationTicks: 0 }), mapping),
+    /matched 0 non-grace metered note segments/);
+  assert.deepEqual(performanceForMovement(withMeasureEvents(grace, event), mapping), performanceForMovement(score, mapping));
+  assert.throws(() => performanceForMovement(withMeasureEvents(event, { ...event, staff: 2 }), mapping),
+    /matched 2 non-grace metered note segments/);
+  assert.throws(() => performanceForMovement(score, { ...mapping, noteOverrides: [rule, rule] }), /duplicate note override/);
+  assert.throws(() => performanceForMovement(score, { ...mapping, noteOverrides: [{ ...rule, voiceId: "tenor" }] }),
+    /unknown musical voice tenor/);
+  assert.throws(() => performanceForMovement(score, { ...mapping, voices: [] }), /note overrides without voice groups/);
 });
 
 test("an orphan tie continuation reports its measure and voice", () => {

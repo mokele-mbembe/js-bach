@@ -4,7 +4,7 @@ import {
   type PlaybackAsset, type PerformanceTimeline, type Voice,
 } from "./playback-asset.js";
 
-export type { Playback } from "./oscillator-player.js";
+export type { MixedPlayback, Playback } from "./oscillator-player.js";
 export type { PerformanceEvent, PerformanceTimeline, Voice } from "./playback-asset.js";
 
 export interface MovementOptions {

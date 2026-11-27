@@ -7,10 +7,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
-import type { WorkSource } from "../scripts/corpus.js";
+import { performanceForMovement, type WorkSource } from "../scripts/corpus.js";
 import { sliceScore } from "../scripts/score-slice.js";
 import { importMxl } from "../src/import-mxl.js";
-import { toPerformance } from "../src/performance.js";
 import { decodePlayback, type PlaybackAsset } from "../src/playback-asset.js";
 
 const work = "bwv862";
@@ -48,7 +47,7 @@ fs.writeFileSync = (file, ...args) => {
 syncBuiltinESMExports();
 `;
 
-function setup(t: TestContext) {
+function setup(t: TestContext, configure?: (manifest: WorkSource) => void) {
   const root = mkdtempSync(join(tmpdir(), "js-bach-corpus-test-"));
   const children: ChildProcess[] = [];
   t.after(async () => {
@@ -70,6 +69,7 @@ function setup(t: TestContext) {
   const manifest: WorkSource = JSON.parse(readFileSync(manifestFile, "utf8"));
   manifest.movements[0].score.measureRange = [0, 1];
   manifest.movements[1].score.measureRange = [44, 45];
+  configure?.(manifest);
   const saveManifest = (credit: string) => {
     manifest.movements[0].score.attribution = credit;
     const text = `${JSON.stringify(manifest, null, 2)}\n`;
@@ -129,7 +129,8 @@ function assertGeneration(directory: string, manifest: string): void {
     `${fugue}.playback.json`, `${prelude}.playback.json`, "sources.json",
   ]);
   const report = readFileSync(join(directory, "compression.md"), "utf8");
-  for (const { id, title, score } of source.movements) {
+  for (const movement of source.movements) {
+    const { id, title, score } = movement;
     const playback: PlaybackAsset = JSON.parse(readFileSync(join(directory, work, `${id}.playback.json`), "utf8"));
     assert.equal(playback.source.score.attribution, score.attribution);
     assert.equal(playback.source.score.license, score.license);
@@ -138,11 +139,27 @@ function assertGeneration(directory: string, manifest: string): void {
     assert.match(playback.source.score.changes, /Converted from .* to js-bach playback data/);
     const original = importMxl(readFileSync(new URL(`../../corpus/${work}/${score.file}`, import.meta.url)));
     const scoreIR = score.measureRange ? sliceScore(original, score.measureRange, id) : original;
-    assert.deepEqual(decodePlayback(playback), toPerformance(scoreIR));
+    assert.deepEqual(decodePlayback(playback), performanceForMovement(scoreIR, movement));
     const { eventStream, rhythmEncoding, transposedEncoding } = playback.sizes;
     assert.ok(report.includes(`| BWV ${source.bwv} ${title} | ${eventStream.brotliBytes} | ${rhythmEncoding.brotliBytes} | ${transposedEncoding.brotliBytes} |`));
   }
 }
+
+test("a build packs note overrides and marks both kinds of scoped score voice", (t) => {
+  const f = setup(t, ({ movements: [movement] }) => {
+    movement.voices = [{ name: "Soprano", ids: ["1"] }, { name: "Alto", ids: [] }, { name: "Bass", ids: ["5"] }];
+    movement.voiceOverrides = [{ measures: ["1"], scoreVoice: "1", voiceId: "alto" }];
+    movement.noteOverrides = [{ measure: "1", offsetTicks: 0, scoreVoice: "5", midiPitch: 60, voiceId: "alto" }];
+  });
+  f.build();
+  assertGeneration(f.current(), f.initial);
+  const playback: PlaybackAsset = JSON.parse(readFileSync(join(f.current(), work, `${prelude}.playback.json`), "utf8"));
+  assert.deepEqual(playback.source.scopedScoreVoices, ["1", "5"]);
+  const firstChord = playback.performance.notes.filter(([, startSeconds]) => startSeconds === 0);
+  assert.deepEqual(firstChord.map((note) => [note[0], note.length, note[4]]), [
+    [56, 4, undefined], [60, 5, 1], [63, 4, undefined],
+  ]);
+});
 
 function cachedSearches(log: string): string[] {
   return [...log.matchAll(/^(\S+) — .*\(cached search\)$/gm)].map((match) => match[1]);

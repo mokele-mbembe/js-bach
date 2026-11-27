@@ -1,4 +1,4 @@
-import { midiPitch, type ScoreIR } from "./score-ir.js";
+import { midiPitch, type NoteEvent, type ScoreIR } from "./score-ir.js";
 import { expandWrittenRepeats } from "./score-repeats.js";
 import { tieKey, tieStartVoice } from "./score-ties.js";
 
@@ -25,7 +25,7 @@ interface NoteSpan {
   voiceId?: string;
 }
 
-type ResolveVoice = (measure: string, scoreVoice: string) => string | undefined;
+export type ResolveVoice = (measure: string, scoreVoice: string, note: Readonly<NoteEvent>) => string | undefined;
 
 function joinTies(score: ScoreIR, resolveVoice?: ResolveVoice): NoteSpan[] {
   const segments = score.measures.flatMap((measure) => measure.events.flatMap((event) =>
@@ -37,9 +37,10 @@ function joinTies(score: ScoreIR, resolveVoice?: ResolveVoice): NoteSpan[] {
   const spans: NoteSpan[] = [];
   const pending = new Map<string, Map<string, NoteSpan>>();
 
-  for (const { startTick, durationTicks, pitch, voice, measure, tieStart, tieStop } of segments) {
+  for (const segment of segments) {
+    const { startTick, durationTicks, pitch, voice, measure, tieStart, tieStop } = segment;
     const endTick = startTick + durationTicks;
-    const voiceId = resolveVoice?.(measure, voice);
+    const voiceId = resolveVoice?.(measure, voice, segment);
     let span: NoteSpan;
     if (tieStop) {
       const key = tieKey(startTick, pitch);
