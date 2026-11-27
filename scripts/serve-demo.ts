@@ -3,6 +3,7 @@
 import { access, readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname } from "node:path";
+import { gzipSync } from "node:zlib";
 import { currentCorpus } from "./corpus-output.js";
 import type { WorkSource } from "./corpus.js";
 import { demoAssets, workAssets } from "./demo-assets.js";
@@ -55,11 +56,18 @@ const server = createServer(async (request, response) => {
 
   try {
     const contents = await readFile(asset);
+    const extension = extname(asset.pathname);
+    const script = extension === ".js";
+    const acceptsGzip = request.headers["accept-encoding"]?.split(",").some((encoding) => encoding.trim().toLowerCase() === "gzip");
+    const compressed = script && acceptsGzip;
+    const body = compressed ? gzipSync(contents) : contents;
     response.writeHead(200, {
-      "Content-Type": `${types.get(extname(asset.pathname))}; charset=utf-8`,
-      "Content-Length": contents.length,
+      "Content-Type": `${types.get(extension)}; charset=utf-8`,
+      "Content-Length": body.length,
       "Cache-Control": "no-store",
-    }).end(request.method === "HEAD" ? undefined : contents);
+      ...(script ? { Vary: "Accept-Encoding" } : {}),
+      ...(compressed ? { "Content-Encoding": "gzip" } : {}),
+    }).end(request.method === "HEAD" ? undefined : body);
   } catch (error) {
     console.error(error);
     response.writeHead(500).end("Demo assets unavailable");

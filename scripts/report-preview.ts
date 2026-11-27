@@ -126,7 +126,8 @@ async function checkDemo(address: string, packageRoot: string) {
     const preMuted = await timeline();
     assert.ok(preMuted.max > 97 && preMuted.max < 98, "Muting bass should preserve the full BWV 847 timeline");
     await page.waitForFunction((value) => document.querySelector<HTMLProgressElement>("#progress")!.value > value, preMuted.value);
-    assert.deepEqual(await page.evaluate(() => window.jsBachVoiceGainChanges.slice(2).map(({ target }) => target)), [0]);
+    assert.deepEqual(await page.evaluate(() => window.jsBachVoiceGainChanges.slice(2)), [],
+      "A voice muted before play should start at zero gain without a live gain ramp");
 
     await page.locator("#works").getByText(/^BWV 848 · /).click();
     await panel.getByRole("heading", { name: /BWV 848 fugue/i }).waitFor();
@@ -203,7 +204,7 @@ try {
       `| Playwright-observed page requests | ${firstPlay.count} | ${firstPlay.body} | ${firstPlay.transfer} |`,
       `| Catalog and movement | ${firstScore.count} | ${firstScore.body} | ${firstScore.transfer} |`, "",
       "Playback checks covered the lazy piano rolls for BWV 846–849, unison and tied-note highlights during live mute and restore, full-movement timing, solos, and rapid switches.",
-      "The packaged browser API passed Node import, read-only voice and event queries including the BWV 848 tie across source voice IDs, and TypeScript declaration checks. Chromium verified playback, voice selection, stopping, and cancellation.", "",
+      "The packaged browser API passed Node import, read-only voice and event queries including the BWV 848 tie across source voice IDs, and TypeScript declaration checks. Chromium verified scheduled note clocks, initial mute, name and ID voice controls, stopping inside a callback, and cancellation.", "",
     ].join("\n");
     writeFileSync(join(dirname(metadata), "size-report.md"), report);
     if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, report);
