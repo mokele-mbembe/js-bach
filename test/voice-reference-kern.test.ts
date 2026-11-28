@@ -57,6 +57,34 @@ test("**kern rejects rows that cannot establish exact timing or a complete score
   assert.throws(() => readKernVoices("**kern\t**kern\n4c\t4G", voices), /complete \*\*kern spine header and termination/u);
 });
 
+test("**kern accepts a final newline but rejects blank records", () => {
+  const voices = { "1": "soprano" };
+  for (const newline of ["\n", "\r\n"]) {
+    const score = ["**kern", "4c", "*-"].join(newline);
+    const result = readKernVoices(score, voices);
+    assert.equal(result.notes.length, 1);
+    assert.deepEqual(readKernVoices(`${score}${newline}`, voices), result);
+    for (const blank of ["", " \t"]) {
+      assert.throws(() => readKernVoices(["**kern", "4c", blank, "*-"].join(newline), voices), {
+        message: "**kern line 3: empty record",
+      });
+    }
+    assert.throws(() => readKernVoices(`${score}${newline}${newline}`, voices), { message: "**kern line 4: empty record" });
+  }
+});
+
+test("**kern rejects ornaments on rests and preserves beamed rest durations", () => {
+  const voices = { "1": "soprano" };
+  for (const ornament of ["M", "m", "T", "t"]) {
+    const token = `4r${ornament}`;
+    assert.throws(() => readKernVoices(`**kern\t**kern\n4c\t${token}\n*-\t*-`, voices), {
+      message: `**kern line 2: unsupported ornament on rest in spine 2: ${JSON.stringify(token)}`,
+    });
+  }
+  const { notes } = readKernVoices("**kern\n8rL\n8rJ\n16rK\n16rk\n8r;\n4c\n*-", voices);
+  assert.deepEqual(notes, [{ voiceId: "soprano", tick: 512, durationTicks: 256, midiPitch: 60, tieStart: false, tieStop: false }]);
+});
+
 test("**kern rejects broken ties, unsupported spine layouts, and invalid column mappings", () => {
   const voices = { "1": "soprano" };
   assert.throws(() => readKernVoices("**kern\n[4c\n4d]\n*-", voices), /invalid tie continuation/u);

@@ -40,6 +40,7 @@ function readToken(token: string, line: number, column: number) {
   }
   if (pitch === "r") {
     if (accidental || tie.length) fail(line, `invalid accidental or tie on rest ${at}: ${JSON.stringify(token)}`);
+    if (/[MmTt]/u.test(suffix)) fail(line, `unsupported ornament on rest ${at}: ${JSON.stringify(token)}`);
     return { durationTicks, pitchNumber: undefined, tieStart, tieStop };
   }
   if (!/^([A-Ga-g])\1*$/u.test(pitch)) fail(line, `invalid pitch ${at}: ${JSON.stringify(token)}`);
@@ -70,8 +71,10 @@ export function readKernVoices(source: string, columns: Readonly<Record<string, 
 
   const lines = source.replace(/^\uFEFF/u, "").split(/\r?\n/u);
   for (const [index, row] of lines.entries()) {
-    if (!row || row.startsWith("!!")) continue;
+    if (row === "" && index === lines.length - 1) break;
+    if (row.startsWith("!!")) continue;
     const line = index + 1;
+    if (!row.trim()) fail(line, "empty record");
     const fields = row.split("\t");
     if (ended) fail(line, "unexpected record after spine termination");
     if (!spines) {
