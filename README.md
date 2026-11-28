@@ -109,6 +109,15 @@ BWV 849 uses the credited Mutopia engraving. BWV 867 uses the five-staff BWV 867
 
 To check a different corpus movement, pass `--reference <config.json>`. The config gives `source`, `credit`, `license`, and a `voices` object mapping LilyPond variables to musical voice IDs. Supply either `download` or a `file` path relative to the config. Use `archiveMember` for a ZIP input, `sha256` to pin the input, and `memberSha256` to pin the extracted file. The reader supports selected, inline `\relative` voice lines with explicit starting pitches and written notes, rests, skips, and ties. Unsupported LilyPond notation produces an error.
 
+The BWV 856–859 batch deferred voice assignments for all four fugues.
+
+| Fugue | Audit evidence |
+| --- | --- |
+| BWV 856 | The Mutopia engraving uses absolute-pitch staff blocks that split and rejoin parallel music. The current reader requires named relative voice blocks. [Mutopia 964](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=964) |
+| BWV 857 | The original uses `articulate.ly`. A diagnostic copy stripped of wrappers and display commands still hits unsupported chords in the Bass. [Mutopia 2225](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=2225) |
+| BWV 858 | The score and MIDI are from PDMX/OpenWTC, and the manifest has no Mutopia voice reference. [BWV 858 sources](corpus/bwv858/sources.json) |
+| BWV 859 | The Artform/OpenWTC score has a PDMX MIDI reference, and the manifest has no Mutopia voice reference. [BWV 859 sources](corpus/bwv859/sources.json) |
+
 ### Verify and build
 
 Check just the works you are reviewing, then regenerate the complete comparison and demo data.
