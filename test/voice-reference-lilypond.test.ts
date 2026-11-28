@@ -99,3 +99,15 @@ test("LilyPond reference reader rejects unsupported transformations and non-layo
   `, { line: "alto" }), /global/u);
   assert.throws(() => readLilyPondVoices(String.raw`line = \relative c' { c4 | }`, { line: "alto" }), /bar check/u);
 });
+
+test("LilyPond reference reader rejects inline absolute staff voices", () => {
+  assert.throws(() => readLilyPondVoices(String.raw`
+    \score { \new Staff { \partial 4 << { c'4 d'1 } \\ { g4 a1 } >> } }
+  `, { soprano: "soprano", bass: "bass" }), /soprano: expected one inline LilyPond relative voice block/u);
+});
+
+test("LilyPond reference reader rejects chords instead of emitting a partial voice", () => {
+  assert.throws(() => readLilyPondVoices(String.raw`
+    bass = \relative c { c4 <g b>4 d }
+  `, { bass: "bass" }), /bass: unsupported LilyPond token or duration "<"/u);
+});
