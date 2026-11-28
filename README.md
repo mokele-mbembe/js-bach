@@ -109,6 +109,24 @@ BWV 849 uses the credited Mutopia engraving. BWV 867 uses the five-staff BWV 867
 
 To check a different corpus movement, pass `--reference <config.json>`. The config gives `source`, `credit`, `license`, and a `voices` object mapping LilyPond variables to musical voice IDs. Supply either `download` or a `file` path relative to the config. Use `archiveMember` for a ZIP input, `sha256` to pin the input, and `memberSha256` to pin the extracted file. The reader supports selected, inline `\relative` voice lines with explicit starting pitches and written notes, rests, skips, and ties. Unsupported LilyPond notation produces an error.
 
+For a Humdrum reference, set `"format": "kern"` and use `spines` to map 1-based columns to musical voice IDs. Supply `sha256` for the file or archive and `memberSha256` if selecting an archive member. The reader supports a single written score with fixed, monophonic `**kern` spines, explicit rests, held-note null tokens, and reciprocal durations representable on a 256-tick quarter grid. It preserves each segment of a tie. Chords, changing spine paths, and unsupported editorial or timing tokens produce a line-specific error. [Humdrum notation reference](https://www.humdrum.org/rep/kern/) · [Spine and record syntax](https://www.humdrum.org/guide/ch05/)
+
+The following local configuration checks BWV 849 against the pinned David Huron encoding. Save the linked file as `wtc1f04.krn` beside the config and run `npm run audit:voices -- bwv849-fugue --reference <config.json>`. The upstream repository has no license file. The encoding identifies David Huron's 1994 copyright and reserves rights to derivative electronic formats. Keep these comparison files and generated audit reports local. [Pinned `**kern` source and copyright notice](https://github.com/humdrum-tools/bach-wtc/blob/0b4f4d84b90b254615e7ac09730ec473c9611cb6/kern/wtc1f04.krn#L8-L9)
+
+```json
+{
+  "format": "kern",
+  "source": "https://github.com/humdrum-tools/bach-wtc/blob/0b4f4d84b90b254615e7ac09730ec473c9611cb6/kern/wtc1f04.krn",
+  "credit": "David Huron, based on the 1866 Bach-Gesellschaft edition",
+  "license": "Copyright 1994 David Huron. Rights to derivative electronic formats reserved.",
+  "file": "wtc1f04.krn",
+  "sha256": "49bd58e5de6c3ede53b737cc99bc24b9c63cb7051f7475bf3ca27ac3c91fbcc1",
+  "spines": { "1": "bass", "2": "baritone", "3": "tenor", "4": "alto", "5": "soprano" }
+}
+```
+
+This reference produces seven BWV 849 manifest disagreements. The credited Mutopia edition remains the five-voice baseline.
+
 Mutopia audit batches two through seven deferred voice assignments for the fugues BWV 856–877.
 
 | Fugue | Audit evidence |
