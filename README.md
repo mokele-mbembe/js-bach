@@ -109,7 +109,7 @@ BWV 849 uses the credited Mutopia engraving. BWV 867 uses the five-staff BWV 867
 
 To check a different corpus movement, pass `--reference <config.json>`. The config gives `source`, `credit`, `license`, and a `voices` object mapping LilyPond variables to musical voice IDs. Supply either `download` or a `file` path relative to the config. Use `archiveMember` for a ZIP input, `sha256` to pin the input, and `memberSha256` to pin the extracted file. The reader supports selected, inline `\relative` voice lines with explicit starting pitches and written notes, rests, skips, and ties. Unsupported LilyPond notation produces an error.
 
-Mutopia audit batches two through six deferred voice assignments for the fugues BWV 856–875.
+Mutopia audit batches two through seven deferred voice assignments for the fugues BWV 856–877.
 
 | Fugue | Audit evidence |
 | --- | --- |
@@ -133,6 +133,8 @@ Mutopia audit batches two through six deferred voice assignments for the fugues 
 | BWV 873 | The score and MIDI come from the same PDMX/MuseScore entry (130948). The Mutopia catalogue has no corresponding fugue. [BWV 873 sources](corpus/bwv873/sources.json) · [Mutopia catalogue](https://www.mutopiaproject.org/piece-list.html) |
 | BWV 874 | The fugue is a slice of a combined PDMX/MuseScore edition (1193551) with MIDI from the same entry. The Mutopia catalogue has no corresponding fugue. [BWV 874 sources](corpus/bwv874/sources.json) · [Mutopia catalogue](https://www.mutopiaproject.org/piece-list.html) |
 | BWV 875 | The fugue uses PDMX/MuseScore (130952) for the score and MIDI. The work's Mutopia catalogue entry and registered engraving cover only the prelude. [BWV 875 sources](corpus/bwv875/sources.json) · [Mutopia 974](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=974) |
+| BWV 876 | The score and MIDI come from the same PDMX/MuseScore entry (131062). The Mutopia catalogue has no corresponding fugue. [BWV 876 sources](corpus/bwv876/sources.json) · [Mutopia catalogue](https://www.mutopiaproject.org/piece-list.html) |
+| BWV 877 | The score and MIDI come from the same PDMX/MuseScore entry (131064). The Mutopia catalogue has no corresponding fugue. [BWV 877 sources](corpus/bwv877/sources.json) · [Mutopia catalogue](https://www.mutopiaproject.org/piece-list.html) |
 
 ### Verify and build
 
