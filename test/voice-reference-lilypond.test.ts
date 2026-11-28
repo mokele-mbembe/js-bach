@@ -111,3 +111,20 @@ test("LilyPond reference reader rejects chords instead of emitting a partial voi
     bass = \relative c { c4 <g b>4 d }
   `, { bass: "bass" }), /bass: unsupported LilyPond token or duration "<"/u);
 });
+
+test("LilyPond reference reader rejects three parallel branches in a selected relative line", () => {
+  assert.throws(() => readLilyPondVoices(String.raw`
+    upper = \relative c' { c4 << { d4 } \\ { f4 } \\ { a4 } >> }
+  `, { upper: "soprano" }), /upper: expected one inline LilyPond relative voice block/u);
+});
+
+test("LilyPond reference reader rejects a requested embedded voice after reading a supported line", () => {
+  const engraving = String.raw`
+    upper = \relative c' { c4 }
+    \score { \new Staff << \upper \new Voice = "bass" { g4 } >> }
+  `;
+  const reference = readLilyPondVoices(engraving, { upper: "soprano" });
+  assert.deepEqual(reference.notes.map(({ midiPitch }) => midiPitch), [60]);
+  assert.throws(() => readLilyPondVoices(engraving, { upper: "soprano", bass: "bass" }),
+    /bass: expected one inline LilyPond relative voice block/u);
+});
