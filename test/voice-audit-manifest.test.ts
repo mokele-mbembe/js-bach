@@ -1,10 +1,23 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import { checkManifest } from "../scripts/audit-voices.js";
 import { movements, readMovementScore } from "../scripts/corpus.js";
 import { sliceScore } from "../scripts/score-slice.js";
 import { auditVoiceAssignments, type ScoreVoiceNote } from "../scripts/voice-audit-matcher.js";
 import { midiPitch } from "../src/score-ir.js";
+
+test("the BWV 875 fugue audit does not use the prelude engraving", () => {
+  const prelude = movements.find(({ id }) => id === "bwv875-prelude");
+  assert.ok(prelude?.referenceMidi.engraving);
+  const cli = fileURLToPath(new URL("../scripts/audit-voices.js", import.meta.url));
+  const result = spawnSync(process.execPath, [cli, "bwv875-fugue"], { encoding: "utf8", timeout: 10_000 });
+  assert.ifError(result.error);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /No reference configured for bwv875-fugue\. Supply --reference <config\.json>\./u);
+  assert.equal(result.stdout, "");
+});
 
 test("the BWV 849 audit detects a wrong note override even when playback still compiles", () => {
   const movement = movements.find(({ id }) => id === "bwv849-fugue");
