@@ -6,6 +6,7 @@ const UPDATE_MS = 25;
 const STOP_FADE_SECONDS = 0.012;
 const VOICE_GAIN_TIME_CONSTANT = 0.003;
 const VOICE_PAN_TIME_CONSTANT = 0.01;
+const NOTE_PEAK_GAIN = 0.18;
 
 export interface Playback {
   position(): number;
@@ -120,7 +121,7 @@ export function playPerformance(
     if (!stopped) voices.get(voiceId)?.panner?.pan.setTargetAtTime(value, context.currentTime, VOICE_PAN_TIME_CONSTANT);
   }
 
-  function schedule(pitch: number, onset: number, end: number, output: GainNode): void {
+  function schedule(pitch: number, onset: number, end: number, output: GainNode, peak: number): void {
     const oscillator = context.createOscillator();
     const envelope = context.createGain();
     oscillator.type = "triangle";
@@ -130,8 +131,8 @@ export function playPerformance(
 
     const quarterDuration = (end - onset) / 4;
     envelope.gain.setValueAtTime(0, onset);
-    envelope.gain.linearRampToValueAtTime(0.18, onset + Math.min(0.008, quarterDuration));
-    envelope.gain.setValueAtTime(0.18, end - Math.min(0.018, quarterDuration));
+    envelope.gain.linearRampToValueAtTime(peak, onset + Math.min(0.008, quarterDuration));
+    envelope.gain.setValueAtTime(peak, end - Math.min(0.018, quarterDuration));
     envelope.gain.linearRampToValueAtTime(0, end);
 
     active.set(oscillator, onset);
@@ -174,9 +175,11 @@ export function playPerformance(
         if (endSeconds <= seek) continue;
         const end = start + (endSeconds - seek);
         if (end <= now) continue;
-        const output = voiceId === undefined ? master : voices.get(voiceId)?.gain ?? master;
+        const bus = voiceId === undefined ? undefined : voices.get(voiceId);
+        // Offset the centered mono panner's 1/√2 per channel while preserving its equal-power curve.
+        const peak = bus?.panner ? NOTE_PEAK_GAIN * Math.SQRT2 : NOTE_PEAK_GAIN;
         const audioStartTime = Math.max(now, onset);
-        schedule(midiPitch, audioStartTime, end, output);
+        schedule(midiPitch, audioStartTime, end, bus?.gain ?? master, peak);
         const result: unknown = onNote?.({ midiPitch, startSeconds, endSeconds, voiceId: voiceId ?? null, scoreVoice: voice,
           audioStartTime, audioEndTime: end });
         if (result !== null && (typeof result === "object" || typeof result === "function")) {

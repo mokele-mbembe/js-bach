@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import type { Browser } from "playwright";
+import type { Browser, Page } from "playwright";
 import type { ScheduledNote } from "../src/oscillator-player.js";
 import type { PerformanceEvent } from "../src/playback-asset.js";
 
@@ -107,6 +107,65 @@ function checkConsumerImport(packageRoot: string): string {
   const entry = manifest.exports?.["."]?.import;
   assert.equal(typeof entry, "string", "Missing package-root ESM export");
   return new URL(entry, `http://localhost${fixturePath}`).pathname;
+}
+
+async function checkRenderedPanLevels(page: Page): Promise<void> {
+  const { mono, stereo, left, right, recentered } = await page.evaluate(async () => {
+    const url = new URL("./dist/src/oscillator-player.js", location.href).href;
+    const { playPerformance } = await import(url) as typeof import("../src/oscillator-player.js");
+    const sampleRate = 48_000;
+    const performance = { durationSeconds: 0.5, notes: [
+      { midiPitch: 69, voice: "1", voiceId: "alto", startSeconds: 0, endSeconds: 0.45 },
+    ] };
+    async function render(channels: number, route: "direct" | "center" | "fallback" | "left" | "right" | "recenter") {
+      const context = new OfflineAudioContext(channels, sampleRate / 4, sampleRate);
+      if (route === "fallback") Object.defineProperty(context, "createStereoPanner", { value: undefined });
+      const voiceIds = route === "direct" ? [] : ["alto"];
+      const pan = route === "right" ? { alto: 1 }
+        : route === "left" || route === "fallback" || route === "recenter" ? { alto: -1 } : undefined;
+      // The scheduler uses the Web Audio graph and clock shared by both context types.
+      const playback = playPerformance(context as unknown as AudioContext, performance, () => {}, voiceIds, { pan });
+      try {
+        const recenter = route === "recenter" ? context.suspend(0.1).then(async () => {
+          playback.setVoicePan("alto", 0);
+          await context.resume();
+        }) : undefined;
+        const [audio] = await Promise.all([context.startRendering(), recenter]);
+        return Array.from({ length: channels }, (_, channel) => {
+          // Sample the sustained tone after the fade-in and any live pan transition.
+          const samples = audio.getChannelData(channel).subarray(sampleRate * 0.19, sampleRate * 0.23);
+          return Math.sqrt(samples.reduce((sum, sample) => sum + sample ** 2, 0) / samples.length);
+        });
+      } finally {
+        playback.stop();
+      }
+    }
+    const levels = async (channels: number) => ({
+      direct: await render(channels, "direct"),
+      center: await render(channels, "center"),
+      fallback: await render(channels, "fallback"),
+    });
+    return {
+      mono: await levels(1), stereo: await levels(2),
+      left: await render(2, "left"), right: await render(2, "right"), recentered: await render(2, "recenter"),
+    };
+  });
+  for (const [output, { direct, center, fallback }] of [["Mono", mono], ["Stereo", stereo]] as const) {
+    direct.forEach((level, channel) => {
+      assert.ok(level > 0.01, `${output} direct route must produce audible samples`);
+      assert.ok(Math.abs(center[channel] / level - 1) < 0.002, `${output} centered pan must match direct RMS`);
+      assert.ok(Math.abs(fallback[channel] / level - 1) < 0.002, `${output} fallback must preserve direct RMS`);
+    });
+  }
+  assert.ok(left[0] > 0.01 && left[1] < 0.000_001, "Hard-left pan must silence the right channel");
+  assert.ok(right[1] > 0.01 && right[0] < 0.000_001, "Hard-right pan must silence the left channel");
+  const stereoRms = Math.hypot(...stereo.direct);
+  for (const endpoint of [left, right]) {
+    assert.ok(Math.abs(Math.hypot(...endpoint) / stereoRms - 1) < 0.002, "Hard pan must preserve total stereo RMS");
+  }
+  recentered.forEach((level, channel) => {
+    assert.ok(Math.abs(level / stereo.direct[channel] - 1) < 0.002, "Live recentering must restore direct RMS");
+  });
 }
 
 export async function checkBrowserApi(browser: Browser, address: string, packageRoot: string): Promise<void> {
@@ -402,6 +461,7 @@ export async function checkBrowserApi(browser: Browser, address: string, package
     await page.evaluate(async (url) => { await import(url, { with: { type: "json" } }); }, held.url());
     assert.equal(await page.evaluate(() => window.jsBachApiAudio.pitches.length), played, "A canceled import started playback");
     assert.deepEqual(movements, ["bwv846-prelude.playback.json", "bwv846-fugue.playback.json", "bwv847-prelude.playback.json"]);
+    await checkRenderedPanLevels(page);
   } finally {
     releaseSlow();
     await page.close();
