@@ -34,6 +34,11 @@
           </fieldset>
         </form>
 
+        <div class="playback-options">
+          <label>Tempo (×) <input id="tempo-rate" type="number" min="0.5" max="2" step="0.05" value="1" required></label>
+          <label>Transpose (semitones) <input id="transpose" type="number" min="-12" max="12" step="1" value="0" required></label>
+        </div>
+
         <div class="timeline">
           <progress id="progress" max="1" value="0" aria-label="Playback progress"></progress>
           <div class="times"><span id="elapsed">0:00</span><span id="duration">0:00</span></div>

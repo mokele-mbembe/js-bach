@@ -9,6 +9,8 @@ import type { PerformanceEvent } from "../src/playback-asset.js";
 
 const packageName = "@mokele-mbembe/js-bach";
 const fixturePath = "/browser-api-check/";
+const seekTempoRate = 1.5;
+const seekTranspose = 5;
 
 interface OscillatorStart {
   onset: number;
@@ -86,7 +88,9 @@ function checkConsumerImport(packageRoot: string): string {
       note.audioStartTime = 0;
     };
     const pan: Readonly<Record<string, number>> = { Bass: 0.5 };
-    const options: PlayOptions = { movement: "fugue", voice: "Bass", muted, onNote, pan, startSeconds: 0.125 };
+    const options: PlayOptions = {
+      movement: "fugue", voice: "Bass", muted, onNote, pan, startSeconds: 0.125, tempoRate: 1.5, transpose: 5,
+    };
     const playback: Promise<MixedPlayback> = play("bwv846", options);
     void playback.then(handle => { handle.position(); handle.stop(); });
     void playback.then(handle => { handle.setVoiceMuted("Bass", true); handle.setVoicePan("bass", -1); });
@@ -236,7 +240,7 @@ export async function checkBrowserApi(browser: Browser, address: string, package
       await route.fulfill({ contentType: "text/html", body: `<!doctype html>
         <button id="prelude">Prelude</button><button id="bass">Bass</button><button id="slow">Slow</button>
         <button id="scheduled">Schedule and stop</button><button id="invalid-mute">Check invalid mute</button>
-        <button id="seek">Seek and pan</button><button id="invalid-mix">Check invalid pan and seek</button>
+        <button id="seek">Seek with tempo and transposition</button><button id="invalid-mix">Check invalid playback options</button>
         <button id="rejecting">Reject callback</button>
         <button id="inspect">Inspect fugue</button><button id="stop">Stop</button><output id="status"></output>
         <script type="importmap">${JSON.stringify({ imports: { [packageName]: entry } })}</script>
@@ -304,7 +308,8 @@ export async function checkBrowserApi(browser: Browser, address: string, package
             const startSeconds = (first.startSeconds + first.endSeconds) / 2;
             let handle;
             await new Promise((resolve, reject) => {
-              play("bwv846", { ...options, startSeconds, pan: { Bass: -0.75 }, onNote(note) {
+              play("bwv846", { ...options, startSeconds, tempoRate: ${seekTempoRate}, transpose: ${seekTranspose},
+                pan: { Bass: -0.75 }, onNote(note) {
                 audio.notes.push(note);
                 if (audio.notes.length === 1) {
                   try { handle.setVoicePan("bass", 0.5); resolve(); }
@@ -323,6 +328,12 @@ export async function checkBrowserApi(browser: Browser, address: string, package
             await expectRangeError(() => play("bwv846", { ...options, pan: { bass: 2, Bass: 0 } }));
             await expectRangeError(() => play("bwv846", { ...options, startSeconds: -1 }));
             await expectRangeError(() => play("bwv846", { ...options, startSeconds: 1000 }));
+            for (const tempoRate of [0, 0.49, 2.01, Infinity, NaN]) {
+              await expectRangeError(() => play("bwv846", { ...options, tempoRate }));
+            }
+            for (const transpose of [-13, 13, 0.5, Infinity, NaN]) {
+              await expectRangeError(() => play("bwv846", { ...options, transpose }));
+            }
             const handle = await play("bwv846", { ...options, pan: { bass: -1 } });
             try {
               handle.setVoicePan("Bass", 1);
@@ -409,28 +420,32 @@ export async function checkBrowserApi(browser: Browser, address: string, package
     await page.evaluate(() => {
       window.jsBachApiAudio.notes = [];
       window.jsBachApiAudio.starts = [];
+      window.jsBachApiAudio.pitches = [];
       window.jsBachApiAudio.readPan = undefined;
     });
     await page.locator("#seek").click();
     await waitForStatus("Started seek");
     const seek = await page.evaluate(() => {
-      const { notes, starts, expected, seek } = window.jsBachApiAudio;
-      return { note: notes[0], oscillator: starts[0], expected, start: seek!.startSeconds };
+      const { notes, starts, pitches, expected, seek } = window.jsBachApiAudio;
+      return { note: notes[0], oscillator: starts[0], pitch: pitches[0], expected, start: seek!.startSeconds };
     });
     const { audioStartTime: seekOnset, audioEndTime: seekEnd, ...seekEvent } = seek.note;
-    assert.deepEqual(seekEvent, seek.expected, "Seeking into a solo must use the full movement's timestamps");
+    assert.ok(seek.expected);
+    assert.deepEqual(seekEvent, { ...seek.expected, midiPitch: seek.expected.midiPitch + seekTranspose },
+      "A transformed solo seek must report the sounding pitch on the original movement timeline");
+    assert.equal(seekEvent.midiPitch, seek.pitch, "The callback must report the actual oscillator pitch");
     assert.equal(seekOnset, seek.oscillator.onset);
     assert.equal(seekEnd, seek.oscillator.end);
-    const seekAnchor = seekEnd - (seekEvent.endSeconds - seek.start);
+    const seekAnchor = seekEnd - (seekEvent.endSeconds - seek.start) / seekTempoRate;
     assert.ok(Math.abs(seekOnset - Math.max(seekAnchor, seek.oscillator.scheduledAt)) < 0.015,
       "A note spanning the seek point should start on the new audio anchor, or immediately if scheduling is late");
     assert.equal(seek.oscillator.voicePan, -0.75, "The panner must apply the initial value before the oscillator starts");
-    await page.waitForFunction(({ anchor, start }) => {
+    await page.waitForFunction(({ anchor, start, rate }) => {
       const { clock, seek, readPan } = window.jsBachApiAudio;
       const elapsed = clock() - anchor;
-      return elapsed >= 0.05 && Math.abs(seek!.position() - start - elapsed) < 0.015 &&
+      return elapsed >= 0.05 && Math.abs(seek!.position() - start - elapsed * rate) < 0.015 &&
         Math.abs((readPan?.() ?? 0) - 0.5) < 0.01;
-    }, { anchor: seekAnchor, start: seek.start });
+    }, { anchor: seekAnchor, start: seek.start, rate: seekTempoRate });
     await page.locator("#invalid-mix").click();
     await waitForStatus("Started invalid-mix");
 

@@ -351,7 +351,7 @@ test("validates pan and keeps voice gain controls when stereo panning is unavail
   assert.equal(master.output, undefined);
 });
 
-test("rejects invalid initial pan and seek options before creating an audio graph", (t) => {
+test("rejects invalid playback options before creating an audio graph", (t) => {
   t.mock.timers.enable({ apis: ["setInterval"] });
   const setInterval = t.mock.method(globalThis, "setInterval");
   const { audio, gains, oscillators, panners } = fakeAudio({ stereo: true });
@@ -360,6 +360,8 @@ test("rejects invalid initial pan and seek options before creating an audio grap
     { pan: { bass: 0 } },
     ...[-1.01, 1.01, NaN, -Infinity, Infinity].map((alto) => ({ pan: { alto } })),
     ...[-0.01, 2.01, NaN, -Infinity, Infinity].map((startSeconds) => ({ startSeconds })),
+    ...[-1, 0, 0.49, 2.01, NaN, -Infinity, Infinity].map((tempoRate) => ({ tempoRate })),
+    ...[-13, 13, 0.5, NaN, -Infinity, Infinity].map((transpose) => ({ transpose })),
   ];
   for (const options of invalidOptions) {
     assert.throws(() => playPerformance(audio, performance, () => {}, ["alto"], options), RangeError);
@@ -433,6 +435,67 @@ test("seeks through a sustained note and preserves the performance and audio clo
   assert.equal(playback.position(), 4);
   assert.equal(completions, 1);
 });
+
+for (const { tempoRate, transpose, carryRelease, nextOnset, nextRelease, finish, hertz, position } of [
+  { tempoRate: 0.5, transpose: -12, carryRelease: 1.5, nextOnset: 1, nextRelease: 2, finish: 3, hertz: 220, position: 2.03125 },
+  { tempoRate: 2, transpose: 12, carryRelease: 0.375, nextOnset: 0.25, nextRelease: 0.5, finish: 0.75, hertz: 880, position: 2.125 },
+]) {
+  test(`keeps the original movement timeline at ${tempoRate}× with a ${transpose}-semitone shift after a seek`, (t) => {
+    t.mock.timers.enable({ apis: ["setInterval"] });
+    const { audio, context, oscillators } = fakeAudio();
+    context.currentTime = 8;
+    const start = 8.05;
+    const scheduled: ScheduledNote[] = [];
+    let completions = 0;
+    const performance = {
+      durationSeconds: 3.5,
+      notes: [
+        { startSeconds: 1, endSeconds: 2, midiPitch: 65, voice: "1" },
+        { startSeconds: 1.25, endSeconds: 2.75, midiPitch: 69, voice: "4", voiceId: "alto" },
+        { startSeconds: 2.5, endSeconds: 3, midiPitch: 72, voice: "2" },
+      ],
+    };
+    const playback = playPerformance(audio, performance, () => { completions++; }, ["alto"], {
+      startSeconds: 2,
+      tempoRate,
+      transpose,
+      onNote: (note) => scheduled.push(note),
+    });
+
+    context.currentTime = 8.025;
+    t.mock.timers.tick(25);
+    assert.equal(playback.position(), 2);
+    assert.deepEqual(scheduled, [{
+      midiPitch: 69 + transpose, startSeconds: 1.25, endSeconds: 2.75, scoreVoice: "4", voiceId: "alto",
+      audioStartTime: start, audioEndTime: start + carryRelease,
+    }]);
+    assert.equal(oscillators[0].frequency.value, hertz);
+
+    context.currentTime = start + 0.0625;
+    t.mock.timers.tick(25);
+    assert.equal(playback.position(), position);
+    assert.equal(scheduled.length, 1);
+
+    context.currentTime = start + nextOnset - 0.08;
+    t.mock.timers.tick(25);
+    assert.deepEqual(scheduled[1], {
+      midiPitch: 72 + transpose, startSeconds: 2.5, endSeconds: 3, scoreVoice: "2", voiceId: null,
+      audioStartTime: start + nextOnset, audioEndTime: start + nextRelease,
+    });
+    assert.deepEqual(oscillators.map(({ onset }) => onset), scheduled.map((note) => note.audioStartTime));
+    assert.deepEqual(oscillators.map(({ stops }) => stops), scheduled.map((note) => [note.audioEndTime]));
+    assert.deepEqual(performance.notes.map(({ midiPitch }) => midiPitch), [65, 69, 72]);
+
+    for (const oscillator of oscillators) oscillator.dispatchEvent(new Event("ended"));
+    context.currentTime = start + finish - 0.01;
+    t.mock.timers.tick(25);
+    assert.equal(completions, 0);
+    context.currentTime = start + finish;
+    t.mock.timers.tick(50);
+    assert.equal(completions, 1);
+    assert.equal(playback.position(), 3.5);
+  });
+}
 
 test("accepts the exact movement end as a silent seek position", (t) => {
   t.mock.timers.enable({ apis: ["setInterval"] });

@@ -1,4 +1,7 @@
-import { playPerformance, validateVoicePan, type Playback, type MixedPlayback, type ScheduledNote } from "./oscillator-player.js";
+import {
+  playPerformance, validateVoicePan, type Playback, type MixedPlayback, type ScheduledNote,
+  type PlayOptions as SchedulerOptions,
+} from "./oscillator-player.js";
 import {
   decodePlayback, describeVoices, performanceTimeline, soloMusicalVoice,
   type PlaybackAsset, type PerformanceTimeline, type Voice,
@@ -12,7 +15,7 @@ export interface MovementOptions {
   movement?: "prelude" | "fugue";
 }
 
-export interface PlayOptions extends MovementOptions {
+export interface PlayOptions extends MovementOptions, Pick<SchedulerOptions, "tempoRate" | "transpose"> {
   /** A solo voice by its name or ID, such as "Alto" or "alto". Defaults to all voices. */
   voice?: string;
   /** Voice names or IDs to mute from the start. During a solo, only the selected voice is available. */
@@ -23,7 +26,7 @@ export interface PlayOptions extends MovementOptions {
   startSeconds?: number;
   /**
    * Called after play resolves, up to 150 ms before a note starts. Includes muted notes.
-   * After a seek, a sustained note retains its original score times, with its audio onset clipped to the new start.
+   * Note times retain their performance coordinates. Audio timings reflect seek and speed, and MIDI pitch reflects transpose.
    * Scheduling continues while a callback promise is pending. A throw or rejection stops playback.
    */
   onNote?: (note: ScheduledNote) => void;
@@ -81,7 +84,7 @@ export function createBrowserPlayer(
   }
 
   async function play(bwv: string, {
-    movement, voice, muted = [], pan = {}, startSeconds, onNote,
+    movement, voice, muted = [], pan = {}, startSeconds, tempoRate, transpose, onNote,
   }: PlayOptions = {}): Promise<MixedPlayback> {
     const load = movementLoader(bwv, movement);
     if (typeof AudioContext !== "function") throw new Error("Playback requires a browser with Web Audio.");
@@ -149,6 +152,8 @@ export function createBrowserPlayer(
         muted: mutedIds,
         pan: panById,
         startSeconds,
+        tempoRate,
+        transpose,
         onNote: onNote && ((note) => {
           try {
             const result: unknown = onNote(note);
