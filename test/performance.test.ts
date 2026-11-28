@@ -311,7 +311,7 @@ test("the BWV 855 fugue preserves its two audited voices and solo entrances", ()
   }
 });
 
-for (const bwv of [872, 873, 874, 875]) {
+for (const bwv of [872, 873, 874, 875, 876, 877]) {
   test(`the BWV ${bwv} fugue retains full playback with no selectable musical voices`, () => {
     const movement = movements.find(({ id }) => id === `bwv${bwv}-fugue`);
     assert.ok(movement);
