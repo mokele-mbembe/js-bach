@@ -286,6 +286,31 @@ test("the BWV 849 fugue assigns five musical voices without changing the perform
   assert.equal(baritoneEntry.startSeconds, 0);
 });
 
+test("the BWV 855 fugue preserves its two audited voices and solo entrances", () => {
+  const movement = movements.find(({ id }) => id === "bwv855-fugue");
+  assert.ok(movement);
+  const score = readMovementScore(movement);
+  const performance = performanceForMovement(score, movement);
+  assert.deepEqual({
+    ...performance, notes: performance.notes.map(({ voiceId, ...note }) => note),
+  }, toPerformance(score));
+
+  const voices = [
+    { voiceId: "soprano", voice: "1", count: 420, midiPitch: 64, entry: 0 },
+    { voiceId: "bass", voice: "5", count: 391, midiPitch: 47, entry: 3 },
+  ];
+  assert.deepEqual(new Set(performance.notes.map(({ voiceId }) => voiceId)), new Set(voices.map(({ voiceId }) => voiceId)));
+  for (const { voiceId, voice, count, midiPitch, entry } of voices) {
+    const notes = performance.notes.filter((note) => note.voiceId === voiceId);
+    assert.equal(notes.length, count);
+    assert.deepEqual(new Set(notes.map((note) => note.voice)), new Set([voice]));
+    assert.deepEqual(notes[0], { voiceId, voice, midiPitch, startSeconds: entry, endSeconds: entry + 0.125 });
+    const solo = soloMusicalVoice(performance, voiceId);
+    assert.equal(solo.notes.length, count);
+    assert.deepEqual(solo.notes[0], { voiceId, voice, midiPitch, startSeconds: 0, endSeconds: 0.125 });
+  }
+});
+
 test("BWV 867's five audited conflicts can be assigned by individual written note", () => {
   const movement = movements.find(({ id }) => id === "bwv867-fugue");
   assert.ok(movement);
