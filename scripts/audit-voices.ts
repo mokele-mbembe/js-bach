@@ -10,9 +10,10 @@ import { midiPitch, type ScoreIR } from "../src/score-ir.js";
 import { movements, performanceForMovement, readMovementScore, resolveVoiceForMovement } from "./corpus.js";
 import { downloadSource, verifySourceBytes } from "./source-download.js";
 import { auditVoiceAssignments, type ReferenceVoiceNote, type ScoreVoiceNote, type VoiceAudit } from "./voice-audit-matcher.js";
+import { readKernVoices } from "./voice-reference-kern.js";
 import { readLilyPondVoices } from "./voice-reference-lilypond.js";
 
-interface VoiceReference {
+interface ReferenceInput {
   source: string;
   credit: string;
   license: string;
@@ -21,8 +22,22 @@ interface VoiceReference {
   sha256?: string;
   archiveMember?: string;
   memberSha256?: string;
+}
+
+interface LilyPondReference extends ReferenceInput {
+  format?: "lilypond";
+  spines?: never;
   voices: Record<string, string>;
 }
+
+interface KernReference extends ReferenceInput {
+  format: "kern";
+  sha256: string;
+  spines: Record<string, string>;
+  voices?: never;
+}
+
+type VoiceReference = LilyPondReference | KernReference;
 
 const presets: Record<string, VoiceReference> = {
   "bwv849-fugue": {
@@ -61,7 +76,9 @@ async function getReference(id: string, config?: string): Promise<VoiceReference
     return presets[id];
   }
   const reference = JSON.parse(await readFile(config, "utf8")) as VoiceReference;
-  assert.ok(reference && typeof reference === "object", "Expected a reference configuration object");
+  assert.ok(reference && typeof reference === "object" && !Array.isArray(reference), "Expected a reference configuration object");
+  assert.ok(reference.format === undefined || reference.format === "lilypond" || reference.format === "kern",
+    'Expected reference.format to be "lilypond" or "kern"');
   for (const field of ["source", "credit", "license"] as const) {
     assert.ok(typeof reference[field] === "string" && reference[field].trim(), `Expected reference.${field}`);
   }
@@ -71,18 +88,29 @@ async function getReference(id: string, config?: string): Promise<VoiceReference
     assert.ok(reference[field] === undefined || typeof reference[field] === "string" && reference[field].trim(), `Invalid reference.${field}`);
   }
   assert.ok(Boolean(reference.file) !== Boolean(reference.download), "Provide one reference.file or reference.download");
-  assert.ok(reference.voices && typeof reference.voices === "object" && !Array.isArray(reference.voices), "Expected reference.voices");
-  const voices = Object.entries(reference.voices);
-  assert.ok(voices.length > 0 && voices.every(([key, id]) => /^[A-Za-z][A-Za-z0-9_]*$/.test(key) &&
-    typeof id === "string" && /^[a-z][a-z0-9-]*$/.test(id)), "Expected LilyPond variable names mapped to lowercase musical voice IDs");
+  const isKern = reference.format === "kern";
+  const field = isKern ? "spines" : "voices";
+  const selection = isKern ? reference.spines : reference.voices;
+  assert.ok((isKern ? reference.voices : reference.spines) === undefined, `Use only reference.${field} for this format`);
+  assert.ok(selection && typeof selection === "object" && !Array.isArray(selection), `Expected reference.${field}`);
+  const voices = Object.entries(selection);
+  const validKey = isKern ? (key: string) => /^[1-9]\d*$/u.test(key) && Number.isSafeInteger(Number(key))
+    : (key: string) => /^[A-Za-z][A-Za-z0-9_]*$/u.test(key);
+  const voiceKeys = isKern ? "**kern 1-based spine columns" : "LilyPond variable names";
+  assert.ok(voices.length > 0 && voices.every(([key, id]) => validKey(key) &&
+    typeof id === "string" && /^[a-z][a-z0-9-]*$/u.test(id)), `Expected ${voiceKeys} mapped to lowercase musical voice IDs`);
   assert.equal(new Set(voices.map(([, id]) => id)).size, voices.length, "Expected unique musical voice IDs");
   for (const sha256 of [reference.sha256, reference.memberSha256]) {
-    if (sha256 !== undefined) assert.match(sha256, /^[a-f0-9]{64}$/i);
+    if (sha256 !== undefined) assert.match(sha256, /^[a-f0-9]{64}$/iu);
+  }
+  if (isKern) {
+    assert.ok(reference.sha256, "Expected reference.sha256 for **kern input");
+    if (reference.archiveMember) assert.ok(reference.memberSha256, "Expected reference.memberSha256 for archived **kern input");
   }
   return { ...reference, file: reference.file && resolve(dirname(config), reference.file) };
 }
 
-async function loadEngraving({ file, download, sha256, archiveMember, memberSha256 }: VoiceReference) {
+async function loadEngraving({ file, download, sha256, archiveMember, memberSha256, format }: VoiceReference) {
   const scratch = await mkdtemp(join(tmpdir(), "js-bach-voice-reference-"));
   try {
     const path = file ?? join(scratch, "reference");
@@ -91,7 +119,7 @@ async function loadEngraving({ file, download, sha256, archiveMember, memberSha2
     const inputSha256 = verifySourceBytes(bytes, sha256, download ?? path);
     const engraving = archiveMember ? unzipSync(bytes, { filter: ({ name }) => name === archiveMember })[archiveMember] : bytes;
     assert.ok(engraving, `Missing reference archive member ${archiveMember}`);
-    const engravingSha256 = verifySourceBytes(engraving, memberSha256, archiveMember ?? "LilyPond reference");
+    const engravingSha256 = verifySourceBytes(engraving, memberSha256, archiveMember ?? (format === "kern" ? "**kern reference" : "LilyPond reference"));
     return { bytes: engraving, inputSha256, engravingSha256 };
   } finally {
     await rm(scratch, { recursive: true, force: true });
@@ -143,13 +171,17 @@ function compilerCheck(score: ScoreIR, audit: VoiceAudit, id: string) {
 function markdown(id: string, report: Awaited<ReturnType<typeof auditMovement>>): string {
   const { reference, audit, ticksPerQuarter, withinMeasure, checks, scoreOnly, referenceOnly } = report;
   const byTie = audit.assignments.filter(({ evidence }) => evidence === "tie").length;
+  const formatName = reference.format === "kern" ? "`**kern`" : "LilyPond";
+  const sourceLabel = reference.format === "kern" ? "Encoding source" : "Engraving source";
   const tieLabel = ({ tieStart, tieStop }: { tieStart: boolean; tieStop: boolean }) =>
     tieStart && tieStop ? "tie in/out" : tieStart ? "tie out" : tieStop ? "tie in" : "untied";
   const lines = [
     `# ${id} voice audit`, "",
     `- MusicXML: ${report.score.edition}. [Score source](${report.score.source})`,
-    `- Reference: ${reference.credit}. ${reference.license}. [Engraving source](${reference.source})`,
-    `- Input SHA-256: \`${reference.inputSha256}\`. LilyPond SHA-256: \`${reference.engravingSha256}\`.`,
+    `- Reference: ${reference.credit}. ${reference.license}. [${sourceLabel}](${reference.source})`,
+    `- Input SHA-256: \`${reference.inputSha256}\`. ${formatName} SHA-256: \`${reference.engravingSha256}\`.`,
+    ...(reference.format === "kern" ? [`- \`**kern\` columns (1-based): ${Object.entries(reference.spines)
+      .map(([column, voiceId]) => `\`${column}\` → \`${voiceId}\``).join(", ")}.`] : []),
     `- Written tick grid: ${ticksPerQuarter} ticks per quarter. Includes tie continuations and excludes grace notes.`, "",
     `**${audit.scoreCount - scoreOnly} exact note pairs** from ${audit.scoreCount} score segments and ${audit.referenceCount} reference segments. Musical voices were assigned to ${audit.assignments.length} score segments (${audit.assignments.length - byTie} directly and ${byTie} using written ties).`, "",
     `Exact multiset differences: ${scoreOnly} score-only segments and ${referenceOnly} reference-only segments. Unresolved exact unison groups: ${audit.ambiguities.length}. Matched spans with different tie counts or directions: ${audit.tieDifferences.length}.`, "",
@@ -197,7 +229,8 @@ async function auditMovement(id: string, reference: VoiceReference) {
   assert.ok(movement, `Unknown corpus movement ${id}`);
   const score = readMovementScore(movement);
   const { bytes, inputSha256, engravingSha256 } = await loadEngraving(reference);
-  const engraving = readLilyPondVoices(new TextDecoder("utf-8", { fatal: true }).decode(bytes), reference.voices);
+  const source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  const engraving = reference.format === "kern" ? readKernVoices(source, reference.spines) : readLilyPondVoices(source, reference.voices);
   const ticksPerQuarter = commonGrid(score.ticksPerQuarter, engraving.ticksPerQuarter);
   const scale = ticksPerQuarter / engraving.ticksPerQuarter;
   const written = Array.from(writtenSegments(score, ticksPerQuarter), ({ note }) => note);
