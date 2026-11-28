@@ -237,8 +237,13 @@ function updateProgress(): void {
   frame = requestAnimationFrame(updateProgress);
 }
 
-async function startPlayback(): Promise<void> {
-  if (!current) return;
+function playbackOptionsAreValid(): boolean {
+  return rateInput.reportValidity() && transposeInput.reportValidity();
+}
+
+async function startPlayback(position?: number): Promise<void> {
+  if (!current || !playbackOptionsAreValid()) return;
+  if (position !== undefined) stopPlayback(position);
   const { performance, label } = current;
   const request = ++attempt;
   setTransport(true, "Starting audio…");
@@ -268,13 +273,12 @@ async function startPlayback(): Promise<void> {
 }
 
 function seek(seconds: number): void {
-  const wasPlaying = !stop.disabled;
-  stopPlayback(seconds);
-  if (wasPlaying) void startPlayback();
+  if (stop.disabled) stopPlayback(seconds);
+  else void startPlayback(seconds);
 }
 
 function updatePlaybackOptions(): void {
-  if (!rateInput.reportValidity() || !transposeInput.reportValidity()) return;
+  if (!playbackOptionsAreValid()) return;
   const rate = rateInput.valueAsNumber;
   const semitones = transposeInput.valueAsNumber;
   if (rate === tempoRate && semitones === transpose) return;
@@ -286,7 +290,7 @@ function updatePlaybackOptions(): void {
 
 rateInput.addEventListener("change", updatePlaybackOptions);
 transposeInput.addEventListener("change", updatePlaybackOptions);
-play.addEventListener("click", startPlayback);
+play.addEventListener("click", () => { void startPlayback(); });
 stop.addEventListener("click", () => {
   stopPlayback();
   setTransport(false, "Stopped");

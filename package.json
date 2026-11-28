@@ -1,6 +1,6 @@
 {
   "name": "js-bach",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Local browser player for J.S. Bach’s Well-Tempered Clavier",
   "private": true,
   "type": "module",
