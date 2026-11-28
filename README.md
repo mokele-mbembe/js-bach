@@ -28,7 +28,7 @@ The **Verify corpus** workflow builds and tests the static demo from the verifie
 
 ## Play from a browser app
 
-The `0.1.3` npm preview includes a browser ESM entry with TypeScript declarations. Install `@mokele-mbembe/js-bach@preview` in your browser app and call `play` from a user interaction.
+The `0.1.4` npm preview includes a browser ESM entry with TypeScript declarations. Install `@mokele-mbembe/js-bach@preview` in your browser app and call `play` from a user interaction.
 
 ```js
 import { play, stop } from "@mokele-mbembe/js-bach";
@@ -56,7 +56,7 @@ const playback = await play("bwv846", {
 
 Run this from a user interaction. `onNote` runs up to 150 ms before the oscillator starts, including for muted voices. Scheduling continues while a callback promise is pending. A thrown error or rejected promise stops that playback. Compare `startSeconds` and `endSeconds` with `playback.position()` to highlight the notes as they sound. `audioStartTime` and `audioEndTime` give the Web Audio times for scheduling against the same audio clock. [Callback, mute, and solo semantics](docs/npm-preview.md#programmable-voices)
 
-In the current source build, use `play("bwv846", { movement: "fugue", startSeconds: 20, pan: { Alto: -0.6, bass: 0.6 } })` to start 20 seconds into the fugue with two voices panned apart. Change a voice live with `playback.setVoicePan("Alto", 0)`. In the demo, select **Spread voices** to widen the stereo field and click the piano roll to choose a start time. Clicking during playback continues from that point with the current mute and pan settings. [Seek and stereo pan](docs/npm-preview.md#seek-and-stereo-pan)
+Use `play("bwv846", { movement: "fugue", startSeconds: 20, pan: { Alto: -0.6, bass: 0.6 } })` to start 20 seconds into the fugue with two voices panned apart. Change a voice live with `playback.setVoicePan("Alto", 0)`. In the demo, select **Spread voices** to widen the stereo field and click the piano roll to choose a start time. Clicking during playback continues from that point with the current mute and pan settings. [Seek and stereo pan](docs/npm-preview.md#seek-and-stereo-pan)
 
 Use **Tempo** and **Transpose** in the demo to change the speed and sounding pitch during playback. The browser API accepts the same settings when starting playback, for example `play("bwv848", { movement: "fugue", tempoRate: 1.5, transpose: 2 })`. Seek and note positions stay on the movement timeline. [Tempo and transposition](docs/npm-preview.md#tempo-and-transposition)
 

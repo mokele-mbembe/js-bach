@@ -73,7 +73,7 @@ Scheduling continues while a callback promise is pending. A synchronous throw or
 
 ### Seek and stereo pan
 
-The current source build adds `startSeconds`, `pan`, and `setVoicePan`. From a click handler, start anywhere on the movement timeline and set initial pan by voice ID or display name.
+The `0.1.4` preview adds `startSeconds`, `pan`, and `setVoicePan`. From a click handler, start anywhere on the movement timeline and set initial pan by voice ID or display name.
 
 ```js
 const playback = await play("bwv846", {
@@ -91,7 +91,7 @@ Pan ranges from `-1` (left) to `1` (right) with `0` at center. Unspecified voice
 
 ### Tempo and transposition
 
-The current source build supports `tempoRate` from `0.5` through `2` and integer `transpose` values from `-12` through `12` semitones. The defaults are `1` and `0`. Invalid values raise `RangeError`.
+The `0.1.4` preview supports `tempoRate` from `0.5` through `2` and integer `transpose` values from `-12` through `12` semitones. The defaults are `1` and `0`. Invalid values raise `RangeError`.
 
 ```js
 const playback = await play("bwv848", {
