@@ -39,6 +39,10 @@
       "id": "bwv855-fugue",
       "kind": "fugue",
       "title": "Fugue in E minor",
+      "voices": [
+        { "name": "Soprano", "ids": ["1"] },
+        { "name": "Bass", "ids": ["5"] }
+      ],
       "score": {
         "file": "fugue.mxl",
         "edition": "Noctave",

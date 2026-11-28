@@ -15,6 +15,7 @@ interface PianoRollMovement {
   readonly durationSeconds: number;
   readonly notes: readonly RollNote[];
   readonly entries: readonly RollEntry[];
+  voiceColor(id: string): string;
 }
 
 interface RollLayout {
@@ -33,7 +34,9 @@ const voiceColors = new Map([
   ["tenor", "#9acbff"],
   ["baritone", "#c6b4ff"],
   ["bass", "#efaed8"],
+  ["mezzo", "#ff8b70"],
 ]);
+const fallbackVoiceColors = ["#e7d547", "#44d7dc", "#8ace51", "#dc82e0", "#64a0f2"];
 const backgroundColor = "#102321";
 const mutedAlpha = 0.26;
 const left = 34;
@@ -41,8 +44,14 @@ const right = 8;
 const top = 23;
 const bottom = 24;
 
-export function pianoRollVoiceColor(id: string): string {
-  return voiceColors.get(id) ?? "#f5f5eb";
+export function createPianoRollPalette(voiceIds: readonly string[]): (id: string) => string {
+  const colors = new Map(voiceColors);
+  let fallback = 0;
+  for (const id of voiceIds) {
+    if (colors.has(id)) continue;
+    colors.set(id, fallbackVoiceColors[fallback++ % fallbackVoiceColors.length]);
+  }
+  return (id) => colors.get(id) ?? fallbackVoiceColors[0];
 }
 
 function timeLabel(seconds: number): string {
@@ -78,7 +87,7 @@ function drawScore(
   context.fillStyle = backgroundColor;
   context.fillRect(0, 0, width, height);
   if (!movement || !layout) return;
-  const { durationSeconds, notes, entries } = movement;
+  const { durationSeconds, notes, entries, voiceColor } = movement;
   const { minimumPitch, maximumPitch, plotWidth, plotEnd, rowHeight, xAt, yAt } = layout;
 
   context.font = "11px system-ui, sans-serif";
@@ -112,7 +121,7 @@ function drawScore(
 
   for (const entry of entries) {
     const x = xAt(entry.startSeconds);
-    const color = pianoRollVoiceColor(entry.voiceId);
+    const color = voiceColor(entry.voiceId);
     context.strokeStyle = color;
     context.globalAlpha = 0.55;
     context.setLineDash([2, 3]);
@@ -132,7 +141,7 @@ function drawScore(
     for (const { voiceId, startSeconds, endSeconds, midiPitch } of notes) {
       if (muted.has(voiceId) !== drawMuted) continue;
       const x = xAt(startSeconds);
-      context.fillStyle = pianoRollVoiceColor(voiceId);
+      context.fillStyle = voiceColor(voiceId);
       context.fillRect(x, yAt(midiPitch) + inset, Math.max(1, xAt(endSeconds) - x), rowHeight - 2 * inset);
     }
   }
@@ -141,7 +150,7 @@ function drawScore(
 
 function drawActiveNotes(
   context: CanvasRenderingContext2D,
-  notes: readonly RollNote[],
+  { notes, voiceColor }: PianoRollMovement,
   { rowHeight, xAt, yAt }: RollLayout,
   position: number,
   muted: ReadonlySet<string>,
@@ -169,7 +178,7 @@ function drawActiveNotes(
         context.fillRect(x, y, width, height);
         context.globalAlpha = mutedAlpha;
       }
-      context.fillStyle = pianoRollVoiceColor(voiceId);
+      context.fillStyle = voiceColor(voiceId);
       context.fillRect(x, y, width, height);
       context.globalAlpha = 1;
     }
@@ -215,7 +224,7 @@ export function createPianoRoll(canvas: HTMLCanvasElement) {
     context.drawImage(backdrop, 0, 0);
     if (!movement || !layout) return;
     context.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
-    if (playing) drawActiveNotes(context, movement.notes, layout, position, muted);
+    if (playing) drawActiveNotes(context, movement, layout, position, muted);
     context.fillStyle = "#f5f5eb";
     context.fillRect(layout.xAt(position), top, 1.5, layout.plotEnd - top);
   }
