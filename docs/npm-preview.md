@@ -71,6 +71,24 @@ Scheduling continues while a callback promise is pending. A synchronous throw or
 
 `muted` starts the listed voice buses at zero gain. Muted voices still schedule oscillators and emit `onNote`, so restoring a sustained voice keeps its original timing. `voice`, `muted`, and `setVoiceMuted` accept either the voice ID or its display name. During a solo, the initial and live mute settings apply to the selected voice. Other labels raise `RangeError`.
 
+### Seek and stereo pan
+
+The current source build adds `startSeconds`, `pan`, and `setVoicePan`. From a click handler, start anywhere on the movement timeline and set initial pan by voice ID or display name.
+
+```js
+const playback = await play("bwv846", {
+  movement: "fugue",
+  startSeconds: 20,
+  pan: { Alto: -0.6, bass: 0.6 },
+  muted: ["Tenor"],
+});
+playback.setVoicePan("Alto", 0);
+```
+
+Pan ranges from `-1` (left) to `1` (right) with `0` at center. Unspecified voices start centered. During a solo, both controls accept the selected voice only. Unknown voices and out-of-range or non-finite pan values raise `RangeError`. In browsers without stereo panners, the voice buses keep their centered routing and mute controls.
+
+`startSeconds` ranges from zero to `getPerformance().durationSeconds`, inclusive. At the endpoint playback completes without scheduling notes. Passing a start time uses full movement coordinates even for a solo. Omitting it starts a solo at its first entrance with the existing rebased timeline. When seeking into a sustained note, the player starts a new oscillator at the seek point for the remaining duration. `position()` and the callback's `startSeconds` and `endSeconds` use the movement timeline. The callback keeps the note's original musical times, while `audioStartTime` reflects the new oscillator onset.
+
 ## Rebuild and licenses
 
 The TypeScript source, build scripts, and original score files are in `source/`. To rebuild from source, run `npm ci` and `npm run pack:preview` in that directory.

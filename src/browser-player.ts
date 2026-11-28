@@ -1,4 +1,4 @@
-import { playPerformance, type Playback, type MixedPlayback, type ScheduledNote } from "./oscillator-player.js";
+import { playPerformance, validateVoicePan, type Playback, type MixedPlayback, type ScheduledNote } from "./oscillator-player.js";
 import {
   decodePlayback, describeVoices, performanceTimeline, soloMusicalVoice,
   type PlaybackAsset, type PerformanceTimeline, type Voice,
@@ -17,8 +17,13 @@ export interface PlayOptions extends MovementOptions {
   voice?: string;
   /** Voice names or IDs to mute from the start. During a solo, only the selected voice is available. */
   muted?: readonly string[];
+  /** Initial stereo positions from -1 to 1 by voice name or ID. During a solo, only that voice is available. */
+  pan?: Readonly<Record<string, number>>;
+  /** Start on the full movement timeline. Omit for the usual solo playback starting at its first entrance. */
+  startSeconds?: number;
   /**
    * Called after play resolves, up to 150 ms before a note starts. Includes muted notes.
+   * After a seek, a sustained note retains its original score times, with its audio onset clipped to the new start.
    * Scheduling continues while a callback promise is pending. A throw or rejection stops playback.
    */
   onNote?: (note: ScheduledNote) => void;
@@ -75,7 +80,9 @@ export function createBrowserPlayer(
     return performanceTimeline(decodePlayback(asset));
   }
 
-  async function play(bwv: string, { movement, voice, muted = [], onNote }: PlayOptions = {}): Promise<MixedPlayback> {
+  async function play(bwv: string, {
+    movement, voice, muted = [], pan = {}, startSeconds, onNote,
+  }: PlayOptions = {}): Promise<MixedPlayback> {
     const load = movementLoader(bwv, movement);
     if (typeof AudioContext !== "function") throw new Error("Playback requires a browser with Web Audio.");
 
@@ -109,14 +116,20 @@ export function createBrowserPlayer(
       const soloId = voice === undefined ? undefined : voiceId(voice, voices);
       const available = soloId === undefined ? voices : voices.filter(({ id }) => id === soloId);
       const mutedIds = muted.map((name) => voiceId(name, available));
+      const panById = Object.fromEntries(Object.entries(pan).map(([name, value]) => {
+        validateVoicePan(value);
+        return [voiceId(name, available), value];
+      }));
       const fullPerformance = decodePlayback(asset);
-      const performance = soloId === undefined ? fullPerformance : soloMusicalVoice(fullPerformance, soloId);
+      const performance = soloId === undefined ? fullPerformance
+        : soloMusicalVoice(fullPerformance, soloId, startSeconds === undefined ? "solo" : "movement");
 
       let finalPosition: number | undefined;
       let playback: MixedPlayback;
       const handle: MixedPlayback = {
         position: () => finalPosition ?? playback.position(),
         setVoiceMuted: (name, muted) => playback.setVoiceMuted(voiceId(name, available), muted),
+        setVoicePan: (name, value) => playback.setVoicePan(voiceId(name, available), value),
         stop() {
           if (finalPosition === undefined) {
             finalPosition = playback.position();
@@ -134,6 +147,8 @@ export function createBrowserPlayer(
         if (active === handle) active = undefined;
       }, available.map(({ id }) => id), {
         muted: mutedIds,
+        pan: panById,
+        startSeconds,
         onNote: onNote && ((note) => {
           try {
             const result: unknown = onNote(note);

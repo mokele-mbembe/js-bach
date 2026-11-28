@@ -69,15 +69,20 @@ async function checkDemo(address: string, packageRoot: string) {
       AudioNode.prototype.connect = function (this: AudioNode, destination: AudioNode | AudioParam) {
         if (this instanceof GainNode) {
           if (destination === this.context.destination) masters.add(this);
-          else if (destination instanceof GainNode && masters.has(destination)) initialGains.set(this.gain, this.gain.value);
+          else if (destination instanceof StereoPannerNode || (destination instanceof GainNode && masters.has(destination))) {
+            initialGains.set(this.gain, this.gain.value);
+          }
         }
         return Reflect.apply(connect, this, arguments);
       } as typeof connect;
       const buses = new WeakMap<AudioParam, number>();
       const setTarget = AudioParam.prototype.setTargetAtTime;
       AudioParam.prototype.setTargetAtTime = function (target, time, timeConstant) {
-        if (!buses.has(this)) buses.set(this, window.jsBachVoiceGainChanges.length);
-        window.jsBachVoiceGainChanges.push({ bus: buses.get(this)!, target, initialGain: initialGains.get(this) });
+        const initialGain = initialGains.get(this);
+        if (initialGain !== undefined) {
+          if (!buses.has(this)) buses.set(this, window.jsBachVoiceGainChanges.length);
+          window.jsBachVoiceGainChanges.push({ bus: buses.get(this)!, target, initialGain });
+        }
         return setTarget.call(this, target, time, timeConstant);
       };
     });
@@ -90,6 +95,7 @@ async function checkDemo(address: string, packageRoot: string) {
     await play(page, "Prelude");
     assert.deepEqual(scorePaths(), [catalog, prelude], "Cold playback should request only the catalog and BWV 846 prelude");
     const [firstPlay, firstScore] = await Promise.all([measure(requests.slice()), measure(scoreRequests())]);
+    assert.equal(firstPlay.count, 7, "The cold prelude should play in seven page requests");
     assert.ok(requests.every((request) => !request.url().endsWith("/demo/polyphony.js")),
       "The piano roll should load only when its fugue is selected");
 
@@ -215,14 +221,15 @@ try {
       "## npm preview and cold first play", "",
       `Measured from the packed ${archive.name}@${archive.version} in a fresh Chromium page playing the BWV 846 prelude.`,
       "Requests are counted from navigation until Playwright detects the first scheduled oscillator. Browser-internal requests such as the implicit favicon may be omitted. Byte totals cover the complete HTTP responses for the observed requests.", "",
+      "The installed CLI negotiates gzip for JavaScript and CSS. Catalog and movement responses are served as JSON without content encoding.", "",
       "| npm package | Bytes |", "| --- | ---: |",
       `| Download (.tgz) | ${download} |`,
       `| Unpacked files | ${archive.unpackedSize} |`, "",
       "| First play | Requests | Response body bytes | Response bytes with headers |", "| --- | ---: | ---: | ---: |",
       `| Playwright-observed page requests | ${firstPlay.count} | ${firstPlay.body} | ${firstPlay.transfer} |`,
       `| Catalog and movement | ${firstScore.count} | ${firstScore.body} | ${firstScore.transfer} |`, "",
-      "Playback checks covered the lazy piano rolls for BWV 846–849, unison and tied-note highlights during live mute and restore, full-movement timing, solos, and rapid switches.",
-      "The packaged browser API passed Node import, read-only voice and event queries including the BWV 848 tie across source voice IDs, and TypeScript declaration checks. Chromium verified scheduled note clocks, initial mute, name and ID voice controls, callback stops and rejections, and cancellation.", "",
+      "Playback checks covered the lazy piano rolls for BWV 846–849, unison and tied-note highlights during live mute and restore, click seeking, stereo spread, solos, and rapid switches.",
+      "The packaged browser API passed Node import, read-only voice and event queries including the BWV 848 tie across source voice IDs, and TypeScript declaration checks. Chromium verified scheduled note clocks and seeking, initial mute and stereo pan, name and ID voice controls, callback stops and rejections, and cancellation.", "",
     ].join("\n");
     writeFileSync(join(dirname(metadata), "size-report.md"), report);
     if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, report);

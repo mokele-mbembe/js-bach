@@ -3,12 +3,24 @@ import test from "node:test";
 import { playPerformance, type ScheduledNote } from "../src/oscillator-player.js";
 
 class FakeGain {
-  output?: FakeGain;
+  output?: FakeGain | FakeStereoPanner;
   readonly targets: [value: number, time: number][] = [];
   readonly gain = {
     value: 1,
     setValueAtTime() {},
     linearRampToValueAtTime() {},
+    setTargetAtTime: (value: number, time: number) => this.targets.push([value, time]),
+  };
+
+  connect(output: FakeGain | FakeStereoPanner): void { this.output = output; }
+  disconnect(): void { this.output = undefined; }
+}
+
+class FakeStereoPanner {
+  output?: FakeGain;
+  readonly targets: [value: number, time: number][] = [];
+  readonly pan = {
+    value: 0,
     setTargetAtTime: (value: number, time: number) => this.targets.push([value, time]),
   };
 
@@ -28,9 +40,10 @@ class FakeOscillator extends EventTarget {
   stop(time: number): void { this.stops.push(time); }
 }
 
-function fakeAudio() {
+function fakeAudio({ stereo = false } = {}) {
   const oscillators: FakeOscillator[] = [];
   const gains: FakeGain[] = [];
+  const panners: FakeStereoPanner[] = [];
   const context = {
     currentTime: 0,
     destination: new FakeGain(),
@@ -44,8 +57,15 @@ function fakeAudio() {
       oscillators.push(oscillator);
       return oscillator;
     },
+    ...(stereo && {
+      createStereoPanner() {
+        const node = new FakeStereoPanner();
+        panners.push(node);
+        return node;
+      },
+    }),
   };
-  return { context, audio: context as unknown as AudioContext, oscillators, gains };
+  return { context, audio: context as unknown as AudioContext, oscillators, gains, panners };
 }
 
 test("mutes sustaining and scheduled notes through their shared voice gain", (t) => {
@@ -65,7 +85,7 @@ test("mutes sustaining and scheduled notes through their shared voice gain", (t)
   const [sustaining, otherVoice, scheduled] = oscillators;
   const alto = sustaining.output?.output;
   const soprano = otherVoice.output?.output;
-  assert.ok(alto && soprano);
+  assert.ok(alto instanceof FakeGain && soprano instanceof FakeGain);
   assert.notEqual(alto, soprano);
   assert.equal(alto, scheduled.output?.output);
   assert.equal(alto.output, soprano.output);
@@ -125,7 +145,7 @@ test("reports the scheduled audio clock for all buses, including an initially mu
   assert.equal(first.onset, scheduled[0].audioStartTime);
   assert.deepEqual(first.stops, [scheduled[0].audioEndTime]);
   const alto = first.output?.output;
-  assert.ok(alto);
+  assert.ok(alto instanceof FakeGain);
   assert.equal(alto.gain.value, 0);
   assert.deepEqual(alto.targets, []);
 
@@ -254,5 +274,181 @@ test("rejects unknown initially muted IDs before creating the audio graph", (t) 
   }), RangeError);
   assert.equal(setInterval.mock.callCount(), 0);
   assert.deepEqual(gains, []);
+  assert.deepEqual(oscillators, []);
+});
+
+test("routes each voice through its own panner and moves it while the notes keep playing", (t) => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  const { context, audio, gains, panners, oscillators } = fakeAudio({ stereo: true });
+  const playback = playPerformance(audio, {
+    durationSeconds: 1,
+    notes: [
+      { startSeconds: 0, endSeconds: 1, midiPitch: 60, voice: "4", voiceId: "alto" },
+      { startSeconds: 0, endSeconds: 1, midiPitch: 64, voice: "2", voiceId: "soprano" },
+      { startSeconds: 0, endSeconds: 1, midiPitch: 67, voice: "1" },
+    ],
+  }, () => assert.fail("Stopped playback must not naturally end"), ["alto", "soprano"], {
+    muted: ["alto"],
+    pan: { alto: -1 },
+  });
+  const [master, altoGain, sopranoGain] = gains;
+  const [altoPan, sopranoPan] = panners;
+  assert.equal(panners.length, 2);
+  assert.equal(master.output, context.destination);
+  assert.equal(altoGain.output, altoPan);
+  assert.equal(sopranoGain.output, sopranoPan);
+  assert.equal(altoPan.output, master);
+  assert.equal(sopranoPan.output, master);
+  assert.equal(altoGain.gain.value, 0);
+  assert.equal(altoPan.pan.value, -1);
+  assert.equal(sopranoPan.pan.value, 0);
+  assert.deepEqual(altoPan.targets, []);
+  assert.equal(oscillators[0].output?.output, altoGain);
+  assert.equal(oscillators[1].output?.output, sopranoGain);
+  assert.equal(oscillators[2].output?.output, master);
+  const originalOscillators = [...oscillators];
+
+  context.currentTime = 0.25;
+  assert.throws(() => playback.setVoicePan("bass", 0), RangeError);
+  for (const invalid of [-1.01, 1.01, NaN, -Infinity, Infinity]) {
+    assert.throws(() => playback.setVoicePan("alto", invalid), RangeError);
+  }
+  assert.deepEqual(altoPan.targets, []);
+  playback.setVoicePan("alto", 1);
+  assert.deepEqual(altoPan.targets, [[1, 0.25]]);
+  assert.deepEqual(sopranoPan.targets, []);
+  assert.equal(altoGain.gain.value, 0);
+  assert.deepEqual(altoGain.targets, []);
+  assert.equal(playback.position(), 0.25 - 0.05);
+  assert.equal(oscillators.length, originalOscillators.length);
+  oscillators.forEach((oscillator, index) => assert.equal(oscillator, originalOscillators[index]));
+  assert.deepEqual(oscillators.map(({ stops }) => stops), [[1.05], [1.05], [1.05]]);
+
+  playback.stop();
+  for (const oscillator of oscillators) oscillator.dispatchEvent(new Event("ended"));
+  assert.ok(gains.every((gain) => gain.output === undefined));
+  assert.ok(panners.every((panner) => panner.output === undefined));
+});
+
+test("validates pan and keeps voice gain controls when stereo panning is unavailable", (t) => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  const { context, audio, gains, panners } = fakeAudio();
+  const playback = playPerformance(audio, {
+    durationSeconds: 1, notes: [],
+  }, () => assert.fail("Stopped playback must not naturally end"), ["alto"], { pan: { alto: 1 } });
+  const [master, gain] = gains;
+  assert.equal(gain.output, master);
+  assert.deepEqual(panners, []);
+  assert.doesNotThrow(() => playback.setVoicePan("alto", -1));
+  assert.throws(() => playback.setVoicePan("alto", NaN), RangeError);
+  assert.throws(() => playback.setVoicePan("bass", 0), RangeError);
+
+  context.currentTime = 0.2;
+  playback.setVoiceMuted("alto", true);
+  assert.deepEqual(gain.targets, [[0, 0.2]]);
+  playback.stop();
+  assert.equal(gain.output, undefined);
+  assert.equal(master.output, undefined);
+});
+
+test("rejects invalid initial pan and seek options before creating an audio graph", (t) => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  const setInterval = t.mock.method(globalThis, "setInterval");
+  const { audio, gains, oscillators, panners } = fakeAudio({ stereo: true });
+  const performance = { durationSeconds: 2, notes: [] };
+  const invalidOptions = [
+    { pan: { bass: 0 } },
+    ...[-1.01, 1.01, NaN, -Infinity, Infinity].map((alto) => ({ pan: { alto } })),
+    ...[-0.01, 2.01, NaN, -Infinity, Infinity].map((startSeconds) => ({ startSeconds })),
+  ];
+  for (const options of invalidOptions) {
+    assert.throws(() => playPerformance(audio, performance, () => {}, ["alto"], options), RangeError);
+  }
+  assert.equal(setInterval.mock.callCount(), 0);
+  assert.deepEqual(gains, []);
+  assert.deepEqual(panners, []);
+  assert.deepEqual(oscillators, []);
+});
+
+test("seeks through a sustained note and preserves the performance and audio clocks", (t) => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  const { audio, context, oscillators } = fakeAudio();
+  context.currentTime = 10;
+  const scheduled: ScheduledNote[] = [];
+  let completions = 0;
+  const playback = playPerformance(audio, {
+    durationSeconds: 4,
+    notes: [
+      { startSeconds: 0, endSeconds: 1, midiPitch: 59, voice: "4", voiceId: "alto" },
+      { startSeconds: 0, endSeconds: 3, midiPitch: 60, voice: "4", voiceId: "alto" },
+      { startSeconds: 1, endSeconds: 2, midiPitch: 62, voice: "2" },
+      { startSeconds: 1.5, endSeconds: 2.5, midiPitch: 63, voice: "3" },
+      { startSeconds: 2, endSeconds: 3, midiPitch: 64, voice: "2" },
+      { startSeconds: 2.25, endSeconds: 2.75, midiPitch: 67, voice: "1", voiceId: "alto" },
+    ],
+  }, () => { completions++; }, ["alto"], {
+    startSeconds: 2,
+    muted: ["alto"],
+    onNote: (note) => scheduled.push(note),
+  });
+  assert.equal(playback.position(), 2);
+  assert.equal(scheduled.length, 0);
+
+  context.currentTime = 10.025;
+  t.mock.timers.tick(25);
+  assert.equal(playback.position(), 2);
+  assert.deepEqual(scheduled, [
+    { midiPitch: 60, startSeconds: 0, endSeconds: 3, voiceId: "alto", scoreVoice: "4",
+      audioStartTime: 10.05, audioEndTime: 11.05 },
+    { midiPitch: 63, startSeconds: 1.5, endSeconds: 2.5, voiceId: null, scoreVoice: "3",
+      audioStartTime: 10.05, audioEndTime: 10.55 },
+    { midiPitch: 64, startSeconds: 2, endSeconds: 3, voiceId: null, scoreVoice: "2",
+      audioStartTime: 10.05, audioEndTime: 11.05 },
+  ]);
+  const [sustaining] = oscillators;
+  const alto = sustaining.output?.output;
+  assert.ok(alto instanceof FakeGain);
+  assert.equal(alto.gain.value, 0);
+
+  context.currentTime = 10.2;
+  t.mock.timers.tick(25);
+  assert.ok(Math.abs(playback.position() - 2.15) < 1e-9);
+  assert.deepEqual(scheduled[3], {
+    midiPitch: 67, startSeconds: 2.25, endSeconds: 2.75, voiceId: "alto", scoreVoice: "1",
+    audioStartTime: 10.3, audioEndTime: 10.8,
+  });
+  assert.deepEqual(oscillators.map(({ onset }) => onset), scheduled.map((note) => note.audioStartTime));
+  assert.deepEqual(oscillators.map(({ stops }) => stops), scheduled.map((note) => [note.audioEndTime]));
+  playback.setVoiceMuted("alto", false);
+  assert.deepEqual(alto.targets, [[1, 10.2]]);
+  assert.equal(oscillators[0], sustaining);
+  assert.equal(oscillators[3].output?.output, alto);
+
+  for (const oscillator of oscillators) oscillator.dispatchEvent(new Event("ended"));
+  context.currentTime = 12.04;
+  t.mock.timers.tick(25);
+  assert.equal(completions, 0);
+  context.currentTime = 12.06;
+  t.mock.timers.tick(50);
+  assert.equal(playback.position(), 4);
+  assert.equal(completions, 1);
+});
+
+test("accepts the exact movement end as a silent seek position", (t) => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  const { audio, context, oscillators } = fakeAudio();
+  let completions = 0;
+  const playback = playPerformance(audio, {
+    durationSeconds: 2,
+    notes: [{ startSeconds: 1, endSeconds: 2, midiPitch: 60, voice: "1" }],
+  }, () => { completions++; }, [], {
+    startSeconds: 2,
+    onNote: () => assert.fail("The last note has already ended"),
+  });
+  assert.equal(playback.position(), 2);
+  context.currentTime = 0.1;
+  t.mock.timers.tick(100);
+  assert.equal(playback.position(), 2);
+  assert.equal(completions, 1);
   assert.deepEqual(oscillators, []);
 });

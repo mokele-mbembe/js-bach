@@ -127,8 +127,9 @@ export function soloVoice(performance: Performance, voice: string | readonly str
   return rebaseSolo(performance.notes.filter((note) => ids.has(note.voice)));
 }
 
-export function soloMusicalVoice(performance: Performance, voiceId: string): Performance {
-  return rebaseSolo(performance.notes.filter((note) => note.voiceId === voiceId));
+export function soloMusicalVoice(performance: Performance, voiceId: string, timeline: "solo" | "movement" = "solo"): Performance {
+  const notes = performance.notes.filter((note) => note.voiceId === voiceId);
+  return timeline === "solo" ? rebaseSolo(notes) : { durationSeconds: performance.durationSeconds, notes };
 }
 
 function rebaseSolo(notes: Performance["notes"]): Performance {

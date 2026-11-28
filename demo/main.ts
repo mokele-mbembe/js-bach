@@ -47,6 +47,7 @@ let current: { performance: Performance; label: string } | undefined;
 let audio: AudioContext | undefined;
 let playback: MixedPlayback | undefined;
 let polyphony: ReturnType<typeof createPolyphony> | undefined;
+let startSeconds = 0;
 let attempt = 0;
 let frame = 0;
 
@@ -58,7 +59,7 @@ function formatTime(seconds: number): string {
 function showPosition(position: number): void {
   progress.value = position;
   elapsed.textContent = formatTime(position);
-  if (!polyphonyPanel.hidden) polyphony?.setPosition(position, playback !== undefined && position > 0);
+  if (!polyphonyPanel.hidden) polyphony?.setPosition(position, playback !== undefined && position > startSeconds);
 }
 
 function setTransport(isPlaying: boolean, message: string): void {
@@ -67,12 +68,13 @@ function setTransport(isPlaying: boolean, message: string): void {
   status.textContent = message;
 }
 
-function stopPlayback(): void {
+function stopPlayback(position = 0): void {
   attempt++;
   playback?.stop();
   playback = undefined;
   cancelAnimationFrame(frame);
-  showPosition(0);
+  startSeconds = position;
+  showPosition(position);
 }
 
 function link(label: string, url: string): HTMLAnchorElement {
@@ -231,24 +233,27 @@ function updateProgress(): void {
   frame = requestAnimationFrame(updateProgress);
 }
 
-play.addEventListener("click", async () => {
+async function startPlayback(): Promise<void> {
   if (!current) return;
   const { performance, label } = current;
   const request = ++attempt;
   setTransport(true, "Starting audio…");
-  showPosition(0);
+  showPosition(startSeconds);
   try {
     audio ??= new AudioContext();
-    await audio.resume();
+    if (audio.state !== "running") await audio.resume();
     if (request !== attempt) return;
     const onEnded = () => {
       playback = undefined;
+      startSeconds = 0;
       cancelAnimationFrame(frame);
       showPosition(performance.durationSeconds);
       setTransport(false, `Finished ${label}`);
     };
     const mixer = polyphonyPanel.hidden ? undefined : polyphony;
-    playback = playPerformance(audio, performance, onEnded, mixer?.voiceIds ?? [], { muted: mixer && [...mixer.muted] });
+    playback = playPerformance(audio, performance, onEnded, mixer?.voiceIds ?? [], {
+      muted: mixer && [...mixer.muted], pan: mixer?.pan, startSeconds,
+    });
     setTransport(true, `Playing ${label}`);
     updateProgress();
   } catch (error) {
@@ -256,8 +261,15 @@ play.addEventListener("click", async () => {
     const message = error instanceof Error ? error.message : "Unknown audio error";
     setTransport(false, `Could not play audio. ${message}`);
   }
-});
+}
 
+function seek(seconds: number): void {
+  const wasPlaying = !stop.disabled;
+  stopPlayback(seconds);
+  if (wasPlaying) void startPlayback();
+}
+
+play.addEventListener("click", startPlayback);
 stop.addEventListener("click", () => {
   stopPlayback();
   setTransport(false, "Stopped");
@@ -328,7 +340,11 @@ async function loadSelection(): Promise<void> {
       if (!polyphony) {
         const roll = await import("./polyphony.js").catch(() => undefined);
         if (request !== selectionAttempt) return;
-        polyphony = roll?.createPolyphony(polyphonyPanel, (id, muted) => playback?.setVoiceMuted(id, muted));
+        polyphony = roll?.createPolyphony(polyphonyPanel, {
+          mute: (id, muted) => playback?.setVoiceMuted(id, muted),
+          pan: (id, pan) => playback?.setVoicePan(id, pan),
+          seek,
+        });
       }
       polyphony?.show(movement.performance, movement.asset);
     }

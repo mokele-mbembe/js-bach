@@ -15,6 +15,7 @@ interface OscillatorStart {
   scheduledAt: number;
   end?: number;
   voiceGain?: number;
+  voicePan?: number;
 }
 
 declare global {
@@ -27,6 +28,8 @@ declare global {
       notes: ScheduledNote[];
       expected?: PerformanceEvent;
       nextStartSeconds?: number;
+      seek?: { startSeconds: number; position(): number };
+      readPan?(): number;
       callbackFailure?: { position: number; audioTime: number; callbacks: number; oscillators: number };
       callbackPosition?(): number;
       clock(): number;
@@ -71,7 +74,7 @@ function checkConsumerImport(packageRoot: string): string {
     }]);
   `], { cwd, stdio: "inherit" });
   writeFileSync(join(cwd, "consumer.ts"), `
-    import { play, stop, getVoices, getPerformance, type PlayOptions, type Playback, type PerformanceTimeline, type ScheduledNote, type Voice } from ${JSON.stringify(packageName)};
+    import { play, stop, getVoices, getPerformance, type MixedPlayback, type PlayOptions, type Playback, type PerformanceTimeline, type ScheduledNote, type Voice } from ${JSON.stringify(packageName)};
     const muted: readonly string[] = ["Bass"];
     const onNote = (note: ScheduledNote) => {
       const voiceId: string | null = note.voiceId;
@@ -82,10 +85,12 @@ function checkConsumerImport(packageRoot: string): string {
       // @ts-expect-error Scheduled event timing is readonly.
       note.audioStartTime = 0;
     };
-    const options: PlayOptions = { movement: "fugue", voice: "Bass", muted, onNote };
-    const playback: Promise<Playback> = play("bwv846", options);
+    const pan: Readonly<Record<string, number>> = { Bass: 0.5 };
+    const options: PlayOptions = { movement: "fugue", voice: "Bass", muted, onNote, pan, startSeconds: 0.125 };
+    const playback: Promise<MixedPlayback> = play("bwv846", options);
     void playback.then(handle => { handle.position(); handle.stop(); });
-    void play("bwv846", options).then(handle => handle.setVoiceMuted("Bass", true));
+    void playback.then(handle => { handle.setVoiceMuted("Bass", true); handle.setVoicePan("bass", -1); });
+    const plainPlayback: Promise<Playback> = playback;
     const groups: Promise<readonly Voice[]> = getVoices("bwv846", options);
     const timeline: Promise<PerformanceTimeline> = getPerformance("bwv846", options);
     void timeline.then(({ notes }) => {
@@ -125,10 +130,10 @@ export async function checkBrowserApi(browser: Browser, address: string, package
           audio.clock = () => this.currentTime;
         }
       };
-      const outputs = new WeakMap<AudioNode, GainNode>();
+      const outputs = new WeakMap<AudioNode, AudioNode>();
       const connect = AudioNode.prototype.connect;
       AudioNode.prototype.connect = function (this: AudioNode, destination: AudioNode | AudioParam) {
-        if (destination instanceof GainNode) outputs.set(this, destination);
+        if (destination instanceof AudioNode) outputs.set(this, destination);
         return Reflect.apply(connect, this, arguments);
       } as typeof connect;
       const start = OscillatorNode.prototype.start;
@@ -139,8 +144,12 @@ export async function checkBrowserApi(browser: Browser, address: string, package
         start.call(this, when);
         audio.pitches.push(Math.round(69 + 12 * Math.log2(this.frequency.value / 440)));
         const envelope = outputs.get(this);
-        const voiceGain = envelope && outputs.get(envelope)?.gain.value;
-        const started = { onset: when, scheduledAt: this.context.currentTime, voiceGain };
+        const voice = envelope && outputs.get(envelope);
+        const panner = voice && outputs.get(voice);
+        const voiceGain = voice instanceof GainNode ? voice.gain.value : undefined;
+        const voicePan = panner instanceof StereoPannerNode ? panner.pan.value : undefined;
+        if (panner instanceof StereoPannerNode) audio.readPan = () => panner.pan.value;
+        const started = { onset: when, scheduledAt: this.context.currentTime, voiceGain, voicePan };
         starts.set(this, started);
         audio.starts.push(started);
       };
@@ -168,6 +177,7 @@ export async function checkBrowserApi(browser: Browser, address: string, package
       await route.fulfill({ contentType: "text/html", body: `<!doctype html>
         <button id="prelude">Prelude</button><button id="bass">Bass</button><button id="slow">Slow</button>
         <button id="scheduled">Schedule and stop</button><button id="invalid-mute">Check invalid mute</button>
+        <button id="seek">Seek and pan</button><button id="invalid-mix">Check invalid pan and seek</button>
         <button id="rejecting">Reject callback</button>
         <button id="inspect">Inspect fugue</button><button id="stop">Stop</button><output id="status"></output>
         <script type="importmap">${JSON.stringify({ imports: { [packageName]: entry } })}</script>
@@ -226,6 +236,41 @@ export async function checkBrowserApi(browser: Browser, address: string, package
             const handle = await play("bwv846", options);
             try { await expectRangeError(() => handle.setVoiceMuted("alto", true)); }
             finally { handle.stop(); }
+          });
+          bind("seek", async () => {
+            const options = { movement: "fugue", voice: "Bass" };
+            const { notes } = await getPerformance("bwv846", options);
+            const first = notes.find(({ voiceId }) => voiceId === "bass");
+            audio.expected = first;
+            const startSeconds = (first.startSeconds + first.endSeconds) / 2;
+            let handle;
+            await new Promise((resolve, reject) => {
+              play("bwv846", { ...options, startSeconds, pan: { Bass: -0.75 }, onNote(note) {
+                audio.notes.push(note);
+                if (audio.notes.length === 1) {
+                  try { handle.setVoicePan("bass", 0.5); resolve(); }
+                  catch (error) { reject(error); }
+                }
+              } }).then(playback => {
+                handle = playback;
+                audio.seek = { startSeconds, position: handle.position };
+              }, reject);
+            });
+          });
+          bind("invalid-mix", async () => {
+            const options = { movement: "fugue", voice: "bass" };
+            await expectRangeError(() => play("bwv846", { ...options, pan: { Alto: 0 } }));
+            await expectRangeError(() => play("bwv846", { ...options, pan: { Bass: Infinity } }));
+            await expectRangeError(() => play("bwv846", { ...options, pan: { bass: 2, Bass: 0 } }));
+            await expectRangeError(() => play("bwv846", { ...options, startSeconds: -1 }));
+            await expectRangeError(() => play("bwv846", { ...options, startSeconds: 1000 }));
+            const handle = await play("bwv846", { ...options, pan: { bass: -1 } });
+            try {
+              handle.setVoicePan("Bass", 1);
+              await expectRangeError(() => handle.setVoicePan("Alto", 0));
+              await expectRangeError(() => handle.setVoicePan("bass", 1.1));
+              await expectRangeError(() => handle.setVoicePan("bass", NaN));
+            } finally { handle.stop(); }
           });
           bind("rejecting", async () => {
             const failure = new Error("Scheduled callback rejected");
@@ -301,6 +346,34 @@ export async function checkBrowserApi(browser: Browser, address: string, package
 
     await page.locator("#invalid-mute").click();
     await waitForStatus("Started invalid-mute");
+
+    await page.evaluate(() => {
+      window.jsBachApiAudio.notes = [];
+      window.jsBachApiAudio.starts = [];
+      window.jsBachApiAudio.readPan = undefined;
+    });
+    await page.locator("#seek").click();
+    await waitForStatus("Started seek");
+    const seek = await page.evaluate(() => {
+      const { notes, starts, expected, seek } = window.jsBachApiAudio;
+      return { note: notes[0], oscillator: starts[0], expected, start: seek!.startSeconds };
+    });
+    const { audioStartTime: seekOnset, audioEndTime: seekEnd, ...seekEvent } = seek.note;
+    assert.deepEqual(seekEvent, seek.expected, "Seeking into a solo must use the full movement's timestamps");
+    assert.equal(seekOnset, seek.oscillator.onset);
+    assert.equal(seekEnd, seek.oscillator.end);
+    const seekAnchor = seekEnd - (seekEvent.endSeconds - seek.start);
+    assert.ok(Math.abs(seekOnset - Math.max(seekAnchor, seek.oscillator.scheduledAt)) < 0.015,
+      "A note spanning the seek point should start on the new audio anchor, or immediately if scheduling is late");
+    assert.equal(seek.oscillator.voicePan, -0.75, "The panner must apply the initial value before the oscillator starts");
+    await page.waitForFunction(({ anchor, start }) => {
+      const { clock, seek, readPan } = window.jsBachApiAudio;
+      const elapsed = clock() - anchor;
+      return elapsed >= 0.05 && Math.abs(seek!.position() - start - elapsed) < 0.015 &&
+        Math.abs((readPan?.() ?? 0) - 0.5) < 0.01;
+    }, { anchor: seekAnchor, start: seek.start });
+    await page.locator("#invalid-mix").click();
+    await waitForStatus("Started invalid-mix");
 
     await page.evaluate(() => {
       window.jsBachApiAudio.notes = [];
