@@ -42,7 +42,7 @@ const types = new Map([
   [".html", "text/html"], [".css", "text/css"], [".js", "text/javascript"], [".json", "application/json"],
 ]);
 
-function scriptEncoding(acceptEncoding: string | undefined): "gzip" | "identity" | undefined {
+function selectEncoding(acceptEncoding: string | undefined): "gzip" | "identity" | undefined {
   const weights = new Map<string, number>();
   for (const entry of acceptEncoding?.split(",") ?? []) {
     const coding = /^\s*([^;\s]+)\s*(?:;\s*q\s*=\s*(0(?:\.\d{0,3})?|1(?:\.0{0,3})?))?\s*$/iu.exec(entry);
@@ -68,8 +68,8 @@ const server = createServer(async (request, response) => {
   }
 
   const extension = extname(asset.pathname);
-  const script = extension === ".js";
-  const encoding = script ? scriptEncoding(request.headers["accept-encoding"]) : "identity";
+  const compressible = extension === ".js" || extension === ".css";
+  const encoding = compressible ? selectEncoding(request.headers["accept-encoding"]) : "identity";
   if (encoding === undefined) {
     response.writeHead(406, { Vary: "Accept-Encoding" }).end();
     return;
@@ -83,7 +83,7 @@ const server = createServer(async (request, response) => {
       "Content-Type": `${types.get(extension)}; charset=utf-8`,
       "Content-Length": body.length,
       "Cache-Control": "no-store",
-      ...(script ? { Vary: "Accept-Encoding" } : {}),
+      ...(compressible ? { Vary: "Accept-Encoding" } : {}),
       ...(compressed ? { "Content-Encoding": "gzip" } : {}),
     }).end(request.method === "HEAD" ? undefined : body);
   } catch (error) {

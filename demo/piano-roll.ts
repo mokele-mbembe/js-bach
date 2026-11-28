@@ -185,7 +185,7 @@ function drawActiveNotes(
   }
 }
 
-export function createPianoRoll(canvas: HTMLCanvasElement) {
+export function createPianoRoll(canvas: HTMLCanvasElement, onSeek?: (seconds: number) => void) {
   const backdrop = document.createElement("canvas");
   const background = backdrop.getContext("2d");
   const context = canvas.getContext("2d");
@@ -236,17 +236,51 @@ export function createPianoRoll(canvas: HTMLCanvasElement) {
     paint();
   }).observe(canvas);
 
+  if (onSeek) {
+    canvas.setAttribute("role", "slider");
+    canvas.tabIndex = 0;
+    canvas.addEventListener("click", (event) => {
+      if (!movement || !layout) return;
+      const x = event.offsetX - left;
+      if (x >= 0 && x <= layout.plotWidth) onSeek(movement.durationSeconds * (x / layout.plotWidth));
+    });
+    canvas.addEventListener("keydown", (event) => {
+      if (!movement) return;
+      const end = movement.durationSeconds;
+      const { key } = event;
+      let target: number;
+      if (key === "Home") target = 0;
+      else if (key === "End") target = end;
+      else if (key === "ArrowLeft" || key === "ArrowDown") target = position - 5;
+      else if (key === "ArrowRight" || key === "ArrowUp") target = position + 5;
+      else return;
+      event.preventDefault();
+      onSeek(Math.max(0, Math.min(target, end)));
+    });
+  }
+
   return {
     setMovement(next: PianoRollMovement | undefined): void {
       movement = next;
       muted = new Set();
       position = 0;
+      if (next && onSeek) {
+        canvas.setAttribute("aria-valuemin", "0");
+        canvas.setAttribute("aria-valuemax", String(next.durationSeconds));
+        canvas.setAttribute("aria-valuenow", "0");
+        canvas.setAttribute("aria-valuetext", "0:00");
+      }
       playing = false;
       dirty = true;
       paint();
     },
     setPosition(seconds: number, isPlaying: boolean): void {
       if (!movement || (seconds === position && playing === isPlaying && pixelRatio === window.devicePixelRatio)) return;
+      const wholeSeconds = Math.floor(seconds);
+      if (onSeek && wholeSeconds !== Math.floor(position)) {
+        canvas.setAttribute("aria-valuenow", String(wholeSeconds));
+        canvas.setAttribute("aria-valuetext", timeLabel(wholeSeconds));
+      }
       position = seconds;
       playing = isPlaying;
       paint();

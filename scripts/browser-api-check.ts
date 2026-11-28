@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import type { Browser } from "playwright";
+import type { Browser, Page } from "playwright";
 import type { ScheduledNote } from "../src/oscillator-player.js";
 import type { PerformanceEvent } from "../src/playback-asset.js";
 
@@ -15,6 +15,7 @@ interface OscillatorStart {
   scheduledAt: number;
   end?: number;
   voiceGain?: number;
+  voicePan?: number;
 }
 
 declare global {
@@ -27,6 +28,8 @@ declare global {
       notes: ScheduledNote[];
       expected?: PerformanceEvent;
       nextStartSeconds?: number;
+      seek?: { startSeconds: number; position(): number };
+      readPan?(): number;
       callbackFailure?: { position: number; audioTime: number; callbacks: number; oscillators: number };
       callbackPosition?(): number;
       clock(): number;
@@ -71,7 +74,7 @@ function checkConsumerImport(packageRoot: string): string {
     }]);
   `], { cwd, stdio: "inherit" });
   writeFileSync(join(cwd, "consumer.ts"), `
-    import { play, stop, getVoices, getPerformance, type PlayOptions, type Playback, type PerformanceTimeline, type ScheduledNote, type Voice } from ${JSON.stringify(packageName)};
+    import { play, stop, getVoices, getPerformance, type MixedPlayback, type PlayOptions, type Playback, type PerformanceTimeline, type ScheduledNote, type Voice } from ${JSON.stringify(packageName)};
     const muted: readonly string[] = ["Bass"];
     const onNote = (note: ScheduledNote) => {
       const voiceId: string | null = note.voiceId;
@@ -82,10 +85,12 @@ function checkConsumerImport(packageRoot: string): string {
       // @ts-expect-error Scheduled event timing is readonly.
       note.audioStartTime = 0;
     };
-    const options: PlayOptions = { movement: "fugue", voice: "Bass", muted, onNote };
-    const playback: Promise<Playback> = play("bwv846", options);
+    const pan: Readonly<Record<string, number>> = { Bass: 0.5 };
+    const options: PlayOptions = { movement: "fugue", voice: "Bass", muted, onNote, pan, startSeconds: 0.125 };
+    const playback: Promise<MixedPlayback> = play("bwv846", options);
     void playback.then(handle => { handle.position(); handle.stop(); });
-    void play("bwv846", options).then(handle => handle.setVoiceMuted("Bass", true));
+    void playback.then(handle => { handle.setVoiceMuted("Bass", true); handle.setVoicePan("bass", -1); });
+    const plainPlayback: Promise<Playback> = playback;
     const groups: Promise<readonly Voice[]> = getVoices("bwv846", options);
     const timeline: Promise<PerformanceTimeline> = getPerformance("bwv846", options);
     void timeline.then(({ notes }) => {
@@ -102,6 +107,65 @@ function checkConsumerImport(packageRoot: string): string {
   const entry = manifest.exports?.["."]?.import;
   assert.equal(typeof entry, "string", "Missing package-root ESM export");
   return new URL(entry, `http://localhost${fixturePath}`).pathname;
+}
+
+async function checkRenderedPanLevels(page: Page): Promise<void> {
+  const { mono, stereo, left, right, recentered } = await page.evaluate(async () => {
+    const url = new URL("./dist/src/oscillator-player.js", location.href).href;
+    const { playPerformance } = await import(url) as typeof import("../src/oscillator-player.js");
+    const sampleRate = 48_000;
+    const performance = { durationSeconds: 0.5, notes: [
+      { midiPitch: 69, voice: "1", voiceId: "alto", startSeconds: 0, endSeconds: 0.45 },
+    ] };
+    async function render(channels: number, route: "direct" | "center" | "fallback" | "left" | "right" | "recenter") {
+      const context = new OfflineAudioContext(channels, sampleRate / 4, sampleRate);
+      if (route === "fallback") Object.defineProperty(context, "createStereoPanner", { value: undefined });
+      const voiceIds = route === "direct" ? [] : ["alto"];
+      const pan = route === "right" ? { alto: 1 }
+        : route === "left" || route === "fallback" || route === "recenter" ? { alto: -1 } : undefined;
+      // The scheduler uses the Web Audio graph and clock shared by both context types.
+      const playback = playPerformance(context as unknown as AudioContext, performance, () => {}, voiceIds, { pan });
+      try {
+        const recenter = route === "recenter" ? context.suspend(0.1).then(async () => {
+          playback.setVoicePan("alto", 0);
+          await context.resume();
+        }) : undefined;
+        const [audio] = await Promise.all([context.startRendering(), recenter]);
+        return Array.from({ length: channels }, (_, channel) => {
+          // Sample the sustained tone after the fade-in and any live pan transition.
+          const samples = audio.getChannelData(channel).subarray(sampleRate * 0.19, sampleRate * 0.23);
+          return Math.sqrt(samples.reduce((sum, sample) => sum + sample ** 2, 0) / samples.length);
+        });
+      } finally {
+        playback.stop();
+      }
+    }
+    const levels = async (channels: number) => ({
+      direct: await render(channels, "direct"),
+      center: await render(channels, "center"),
+      fallback: await render(channels, "fallback"),
+    });
+    return {
+      mono: await levels(1), stereo: await levels(2),
+      left: await render(2, "left"), right: await render(2, "right"), recentered: await render(2, "recenter"),
+    };
+  });
+  for (const [output, { direct, center, fallback }] of [["Mono", mono], ["Stereo", stereo]] as const) {
+    direct.forEach((level, channel) => {
+      assert.ok(level > 0.01, `${output} direct route must produce audible samples`);
+      assert.ok(Math.abs(center[channel] / level - 1) < 0.002, `${output} centered pan must match direct RMS`);
+      assert.ok(Math.abs(fallback[channel] / level - 1) < 0.002, `${output} fallback must preserve direct RMS`);
+    });
+  }
+  assert.ok(left[0] > 0.01 && left[1] < 0.000_001, "Hard-left pan must silence the right channel");
+  assert.ok(right[1] > 0.01 && right[0] < 0.000_001, "Hard-right pan must silence the left channel");
+  const stereoRms = Math.hypot(...stereo.direct);
+  for (const endpoint of [left, right]) {
+    assert.ok(Math.abs(Math.hypot(...endpoint) / stereoRms - 1) < 0.002, "Hard pan must preserve total stereo RMS");
+  }
+  recentered.forEach((level, channel) => {
+    assert.ok(Math.abs(level / stereo.direct[channel] - 1) < 0.002, "Live recentering must restore direct RMS");
+  });
 }
 
 export async function checkBrowserApi(browser: Browser, address: string, packageRoot: string): Promise<void> {
@@ -125,10 +189,10 @@ export async function checkBrowserApi(browser: Browser, address: string, package
           audio.clock = () => this.currentTime;
         }
       };
-      const outputs = new WeakMap<AudioNode, GainNode>();
+      const outputs = new WeakMap<AudioNode, AudioNode>();
       const connect = AudioNode.prototype.connect;
       AudioNode.prototype.connect = function (this: AudioNode, destination: AudioNode | AudioParam) {
-        if (destination instanceof GainNode) outputs.set(this, destination);
+        if (destination instanceof AudioNode) outputs.set(this, destination);
         return Reflect.apply(connect, this, arguments);
       } as typeof connect;
       const start = OscillatorNode.prototype.start;
@@ -139,8 +203,12 @@ export async function checkBrowserApi(browser: Browser, address: string, package
         start.call(this, when);
         audio.pitches.push(Math.round(69 + 12 * Math.log2(this.frequency.value / 440)));
         const envelope = outputs.get(this);
-        const voiceGain = envelope && outputs.get(envelope)?.gain.value;
-        const started = { onset: when, scheduledAt: this.context.currentTime, voiceGain };
+        const voice = envelope && outputs.get(envelope);
+        const panner = voice && outputs.get(voice);
+        const voiceGain = voice instanceof GainNode ? voice.gain.value : undefined;
+        const voicePan = panner instanceof StereoPannerNode ? panner.pan.value : undefined;
+        if (panner instanceof StereoPannerNode) audio.readPan = () => panner.pan.value;
+        const started = { onset: when, scheduledAt: this.context.currentTime, voiceGain, voicePan };
         starts.set(this, started);
         audio.starts.push(started);
       };
@@ -168,6 +236,7 @@ export async function checkBrowserApi(browser: Browser, address: string, package
       await route.fulfill({ contentType: "text/html", body: `<!doctype html>
         <button id="prelude">Prelude</button><button id="bass">Bass</button><button id="slow">Slow</button>
         <button id="scheduled">Schedule and stop</button><button id="invalid-mute">Check invalid mute</button>
+        <button id="seek">Seek and pan</button><button id="invalid-mix">Check invalid pan and seek</button>
         <button id="rejecting">Reject callback</button>
         <button id="inspect">Inspect fugue</button><button id="stop">Stop</button><output id="status"></output>
         <script type="importmap">${JSON.stringify({ imports: { [packageName]: entry } })}</script>
@@ -226,6 +295,41 @@ export async function checkBrowserApi(browser: Browser, address: string, package
             const handle = await play("bwv846", options);
             try { await expectRangeError(() => handle.setVoiceMuted("alto", true)); }
             finally { handle.stop(); }
+          });
+          bind("seek", async () => {
+            const options = { movement: "fugue", voice: "Bass" };
+            const { notes } = await getPerformance("bwv846", options);
+            const first = notes.find(({ voiceId }) => voiceId === "bass");
+            audio.expected = first;
+            const startSeconds = (first.startSeconds + first.endSeconds) / 2;
+            let handle;
+            await new Promise((resolve, reject) => {
+              play("bwv846", { ...options, startSeconds, pan: { Bass: -0.75 }, onNote(note) {
+                audio.notes.push(note);
+                if (audio.notes.length === 1) {
+                  try { handle.setVoicePan("bass", 0.5); resolve(); }
+                  catch (error) { reject(error); }
+                }
+              } }).then(playback => {
+                handle = playback;
+                audio.seek = { startSeconds, position: handle.position };
+              }, reject);
+            });
+          });
+          bind("invalid-mix", async () => {
+            const options = { movement: "fugue", voice: "bass" };
+            await expectRangeError(() => play("bwv846", { ...options, pan: { Alto: 0 } }));
+            await expectRangeError(() => play("bwv846", { ...options, pan: { Bass: Infinity } }));
+            await expectRangeError(() => play("bwv846", { ...options, pan: { bass: 2, Bass: 0 } }));
+            await expectRangeError(() => play("bwv846", { ...options, startSeconds: -1 }));
+            await expectRangeError(() => play("bwv846", { ...options, startSeconds: 1000 }));
+            const handle = await play("bwv846", { ...options, pan: { bass: -1 } });
+            try {
+              handle.setVoicePan("Bass", 1);
+              await expectRangeError(() => handle.setVoicePan("Alto", 0));
+              await expectRangeError(() => handle.setVoicePan("bass", 1.1));
+              await expectRangeError(() => handle.setVoicePan("bass", NaN));
+            } finally { handle.stop(); }
           });
           bind("rejecting", async () => {
             const failure = new Error("Scheduled callback rejected");
@@ -305,6 +409,34 @@ export async function checkBrowserApi(browser: Browser, address: string, package
     await page.evaluate(() => {
       window.jsBachApiAudio.notes = [];
       window.jsBachApiAudio.starts = [];
+      window.jsBachApiAudio.readPan = undefined;
+    });
+    await page.locator("#seek").click();
+    await waitForStatus("Started seek");
+    const seek = await page.evaluate(() => {
+      const { notes, starts, expected, seek } = window.jsBachApiAudio;
+      return { note: notes[0], oscillator: starts[0], expected, start: seek!.startSeconds };
+    });
+    const { audioStartTime: seekOnset, audioEndTime: seekEnd, ...seekEvent } = seek.note;
+    assert.deepEqual(seekEvent, seek.expected, "Seeking into a solo must use the full movement's timestamps");
+    assert.equal(seekOnset, seek.oscillator.onset);
+    assert.equal(seekEnd, seek.oscillator.end);
+    const seekAnchor = seekEnd - (seekEvent.endSeconds - seek.start);
+    assert.ok(Math.abs(seekOnset - Math.max(seekAnchor, seek.oscillator.scheduledAt)) < 0.015,
+      "A note spanning the seek point should start on the new audio anchor, or immediately if scheduling is late");
+    assert.equal(seek.oscillator.voicePan, -0.75, "The panner must apply the initial value before the oscillator starts");
+    await page.waitForFunction(({ anchor, start }) => {
+      const { clock, seek, readPan } = window.jsBachApiAudio;
+      const elapsed = clock() - anchor;
+      return elapsed >= 0.05 && Math.abs(seek!.position() - start - elapsed) < 0.015 &&
+        Math.abs((readPan?.() ?? 0) - 0.5) < 0.01;
+    }, { anchor: seekAnchor, start: seek.start });
+    await page.locator("#invalid-mix").click();
+    await waitForStatus("Started invalid-mix");
+
+    await page.evaluate(() => {
+      window.jsBachApiAudio.notes = [];
+      window.jsBachApiAudio.starts = [];
     });
     const [uncaught] = await Promise.all([page.waitForEvent("pageerror"), page.locator("#rejecting").click()]);
     assert.equal(uncaught.message, "Scheduled callback rejected");
@@ -329,6 +461,7 @@ export async function checkBrowserApi(browser: Browser, address: string, package
     await page.evaluate(async (url) => { await import(url, { with: { type: "json" } }); }, held.url());
     assert.equal(await page.evaluate(() => window.jsBachApiAudio.pitches.length), played, "A canceled import started playback");
     assert.deepEqual(movements, ["bwv846-prelude.playback.json", "bwv846-fugue.playback.json", "bwv847-prelude.playback.json"]);
+    await checkRenderedPanLevels(page);
   } finally {
     releaseSlow();
     await page.close();

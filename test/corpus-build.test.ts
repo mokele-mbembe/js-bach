@@ -61,7 +61,7 @@ function setup(t: TestContext, configure?: (manifest: WorkSource) => void) {
     rmSync(root, { force: true, recursive: true });
   });
 
-  for (const path of ["package.json", `corpus/${work}`, "node_modules/@xmldom/xmldom", "node_modules/fflate", "dist/src", "dist/scripts"]) {
+  for (const path of ["package.json", `corpus/${work}`, "node_modules/@xmldom/xmldom", "node_modules/fflate", "dist/src", "dist/scripts", "demo/demo.css"]) {
     cpSync(new URL(`../../${path}`, import.meta.url), join(root, path), { recursive: true });
   }
   const output = join(root, "dist/corpus");
@@ -287,37 +287,41 @@ test("an interrupted staging write leaves the previous generation usable", async
   assertGeneration(f.current(), edited);
 });
 
-test("the demo negotiates gzip and identity for scripts with weighted requests", async (t) => {
+test("the demo negotiates gzip and identity for scripts and styles with weighted requests", async (t) => {
   const f = setup(t);
   f.build();
-  const asset = "src/oscillator-player.js";
-  const url = `${await f.startDemo()}/${asset}`;
-  const original = readFileSync(join(f.root, "dist", asset), "utf8");
+  const address = await f.startDemo();
 
-  for (const [acceptEncoding, encoding] of [
-    ["gzip;q=1, identity;q=0", "gzip"],
-    ["*;q=0.5, identity;q=0", "gzip"],
-    ["gzip;q=0, *;q=1", null],
-    ["gzip;q=0.5, identity;q=1", null],
-    ["", null],
+  for (const [route, asset] of [
+    ["src/oscillator-player.js", "dist/src/oscillator-player.js"],
+    ["demo.css", "demo/demo.css"],
   ] as const) {
-    const headers = { "Accept-Encoding": acceptEncoding };
-    const response = await fetch(url, { headers });
-    assert.equal(response.status, 200, acceptEncoding);
-    assert.equal(response.headers.get("content-encoding"), encoding, acceptEncoding);
-    assert.equal(response.headers.get("vary"), "Accept-Encoding");
-    assert.equal(await response.text(), original);
+    const url = `${address}/${route}`;
+    const original = readFileSync(join(f.root, asset), "utf8");
+    for (const [acceptEncoding, encoding] of [
+      ["gzip;q=1, identity;q=0", "gzip"],
+      ["*;q=0.5, identity;q=0", "gzip"],
+      ["gzip;q=0, *;q=1", null],
+      ["gzip;q=0.5, identity;q=1", null],
+      ["", null],
+    ] as const) {
+      const headers = { "Accept-Encoding": acceptEncoding };
+      const response = await fetch(url, { headers });
+      assert.equal(response.status, 200, acceptEncoding);
+      assert.equal(response.headers.get("content-encoding"), encoding, acceptEncoding);
+      assert.equal(response.headers.get("vary"), "Accept-Encoding");
+      assert.equal(await response.text(), original);
 
-    const head = await fetch(url, { method: "HEAD", headers });
-    assert.equal(head.status, 200);
-    assert.equal(head.headers.get("content-encoding"), encoding);
-    assert.equal(head.headers.get("content-length"), response.headers.get("content-length"));
-    assert.equal(await head.text(), "");
+      const head = await fetch(url, { method: "HEAD", headers });
+      assert.equal(head.status, 200);
+      assert.equal(head.headers.get("content-encoding"), encoding);
+      assert.equal(head.headers.get("content-length"), response.headers.get("content-length"));
+      assert.equal(await head.text(), "");
+    }
+    const rejected = await fetch(url, { headers: { "Accept-Encoding": "gzip;q=0, identity;q=0" } });
+    assert.equal(rejected.status, 406);
+    assert.equal(rejected.headers.get("vary"), "Accept-Encoding");
   }
-
-  const rejected = await fetch(url, { headers: { "Accept-Encoding": "gzip;q=0, identity;q=0" } });
-  assert.equal(rejected.status, 406);
-  assert.equal(rejected.headers.get("vary"), "Accept-Encoding");
 });
 
 test("the demo reports how to rebuild a generation without playback files", (t) => {

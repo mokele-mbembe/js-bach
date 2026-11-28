@@ -14,6 +14,7 @@ interface ScheduledOscillator {
   id: number;
   pitch: number;
   bus: number | null;
+  gain?: number;
   start: number;
   stops: number[];
 }
@@ -25,6 +26,8 @@ declare global {
       fills: RollFill[];
       oscillators: ScheduledOscillator[];
       gainChanges: { bus: number; target: number }[];
+      initialPans: number[];
+      panChanges: { panner: number; target: number }[];
     };
   }
 }
@@ -41,6 +44,10 @@ async function renderAt(page: Page, origin: number, position: number): Promise<v
   await page.evaluate((time) => { window.jsBachRollProbe.time = time; }, origin + position);
   await page.waitForFunction((target) =>
     Math.abs(document.querySelector<HTMLProgressElement>("#progress")!.value - target) < 1e-8, position);
+  await assertPlayhead(page, position);
+}
+
+async function assertPlayhead(page: Page, position: number): Promise<void> {
   const { actual, expectedX } = await page.evaluate(() => {
     const canvas = document.querySelector<HTMLCanvasElement>("#polyphony canvas")!;
     const progress = document.querySelector<HTMLProgressElement>("#progress")!;
@@ -51,6 +58,22 @@ async function renderAt(page: Page, origin: number, position: number): Promise<v
   assert.equal(actual?.color, "#f5f5eb", "The last Canvas fill should be the white playhead");
   assert.ok(Math.abs(actual.x - expectedX) <= 1,
     `Canvas playhead at ${actual.x}px should match the ${position}s transport position at ${expectedX}px`);
+}
+
+async function clickRollTime(page: Page, target: number): Promise<number> {
+  const canvas = page.locator("#polyphony canvas");
+  await canvas.scrollIntoViewIfNeeded();
+  const plot = await canvas.evaluate((node: HTMLCanvasElement) => {
+    const { left, top } = node.getBoundingClientRect();
+    const duration = document.querySelector<HTMLProgressElement>("#progress")!.max;
+    return { left: left + node.clientLeft + 34, width: node.clientWidth - 34 - 8,
+      y: top + node.clientTop + node.clientHeight / 2, duration };
+  });
+  await page.mouse.click(plot.left + target / plot.duration * plot.width, plot.y);
+  const position = await page.locator("#progress").evaluate((progress: HTMLProgressElement) => progress.value);
+  assert.ok(Math.abs(position - target) <= plot.duration / plot.width, "A roll click should use the plot's time scale");
+  await assertPlayhead(page, position);
+  return position;
 }
 
 async function scheduledNote(page: Page, origin: number, pitch: number, onset: number, release: number) {
@@ -155,7 +178,9 @@ export async function checkPianoRoll(browser: Browser, address: string): Promise
 
   try {
     await page.addInitScript(() => {
-      const probe: Window["jsBachRollProbe"] = { time: 0, fills: [], oscillators: [], gainChanges: [] };
+      const probe: Window["jsBachRollProbe"] = {
+        time: 0, fills: [], oscillators: [], gainChanges: [], initialPans: [], panChanges: [],
+      };
       window.jsBachRollProbe = probe;
       const OriginalContext = AudioContext;
       // Advance the demo's actual playback clock without waiting through each movement.
@@ -164,10 +189,15 @@ export async function checkPianoRoll(browser: Browser, address: string): Promise
       };
 
       const outputs = new WeakMap<AudioNode, AudioNode>();
+      const panners = new WeakMap<AudioParam, number>();
       const connect = AudioNode.prototype.connect;
       AudioNode.prototype.connect = function (this: AudioNode, destination: AudioNode | AudioParam) {
         const result = Reflect.apply(connect, this, arguments);
         if (destination instanceof AudioNode) outputs.set(this, destination);
+        if (this instanceof StereoPannerNode) {
+          panners.set(this.pan, probe.initialPans.length);
+          probe.initialPans.push(this.pan.value);
+        }
         return result;
       };
       const buses = new WeakMap<AudioParam, number>();
@@ -179,7 +209,9 @@ export async function checkPianoRoll(browser: Browser, address: string): Promise
       const setTarget = AudioParam.prototype.setTargetAtTime;
       AudioParam.prototype.setTargetAtTime = function (target, time, timeConstant) {
         const result = setTarget.call(this, target, time, timeConstant);
-        probe.gainChanges.push({ bus: busId(this), target });
+        const panner = panners.get(this);
+        if (panner === undefined) probe.gainChanges.push({ bus: busId(this), target });
+        else probe.panChanges.push({ panner, target });
         return result;
       };
 
@@ -193,6 +225,7 @@ export async function checkPianoRoll(browser: Browser, address: string): Promise
           id: probe.oscillators.length,
           pitch: Math.round(69 + 12 * Math.log2(this.frequency.value / 440)),
           bus: voice instanceof GainNode ? busId(voice.gain) : null,
+          gain: voice instanceof GainNode ? voice.gain.value : undefined,
           start: when,
           stops: [],
         };
@@ -271,6 +304,60 @@ export async function checkPianoRoll(browser: Browser, address: string): Promise
     const tiedOscillators = await page.evaluate((origin) => window.jsBachRollProbe.oscillators.filter(({ pitch, start }) =>
       pitch === 61 && start >= origin + 127 && start < origin + 128), origin848);
     assert.deepEqual(tiedOscillators, [tiedCSharp], "Restoring Alto must not restart or truncate the original C-sharp 4 oscillator");
+
+    await stop();
+    const beforePreview = await page.evaluate(() => window.jsBachRollProbe.oscillators.length);
+    const paused = await clickRollTime(page, 20);
+    await assertNoHighlights(page, colors848);
+    assert.equal(await page.evaluate(() => window.jsBachRollProbe.oscillators.length), beforePreview,
+      "A stopped roll click should only select a playback position");
+    await altoMute.click();
+    await page.locator("#play").click();
+    await page.getByText("Playing Fugue", { exact: true }).waitFor();
+    assert.equal(await page.locator("#progress").evaluate((progress: HTMLProgressElement) => progress.value), paused,
+      "Play must honor the position selected while stopped");
+    const spread = panel.getByRole("button", { name: "Spread voices" });
+    await spread.click();
+    assert.equal(await spread.getAttribute("aria-pressed"), "true");
+    const live = await page.evaluate(() => {
+      const { oscillators, initialPans, panChanges } = window.jsBachRollProbe;
+      const first = initialPans.length - 3;
+      return { count: oscillators.length, pan: panChanges.filter(({ panner }) => panner >= first) };
+    });
+    assert.ok(live.count > beforePreview, "Playback should have scheduled audio at the selected position");
+    assert.deepEqual(live.pan.filter(({ target }) => target !== 0).map(({ target }) => target), [-1, 1],
+      "The spread control must pan the current voice buses outward");
+
+    const jumped = await clickRollTime(page, 127.42);
+    assert.ok(jumped > 127.1875 && jumped < 127.65625, "The click should seek inside the C-sharp tie");
+    await page.getByText("Playing Fugue", { exact: true }).waitFor();
+    const restarted = await page.evaluate(({ count, beforePreview }) => {
+      const { oscillators, initialPans } = window.jsBachRollProbe;
+      return { notes: oscillators.slice(count), previous: oscillators.slice(beforePreview, count), pans: initialPans.slice(-3) };
+    }, { count: live.count, beforePreview });
+    assert.deepEqual(restarted.pans, [-1, 0, 1], "Seeking should preserve spread on the replacement buses");
+    assert.ok(restarted.previous.some(({ stops }) => stops.length > 1), "Seeking should stop the old playback");
+    const resumedTie = restarted.notes.find(({ pitch, stops, start }) =>
+      pitch === 61 && Math.abs(stops[0] - start - (127.65625 - jumped)) < 1e-7);
+    assert.ok(resumedTie, "The C-sharp must play from the seek point through its original cross-voice release");
+    assert.equal(resumedTie.gain, 0, "The replacement Alto bus must start muted");
+    assert.ok(await panel.getByRole("checkbox", { name: "Mute Alto" }).isChecked());
+    const tiePosition = Math.min(jumped + 0.03, (jumped + 127.65625) / 2);
+    await renderAt(page, resumedTie.start - jumped, tiePosition);
+    assert.deepEqual(await stripe(page, alto848.color, 0.26), { ...alto848, opacity: 0.26 });
+    await spread.click();
+    assert.equal(await spread.getAttribute("aria-pressed"), "false");
+    const centeredPans = await page.evaluate(() => {
+      const { initialPans, panChanges } = window.jsBachRollProbe;
+      return panChanges.filter(({ panner }) => panner >= initialPans.length - 3).map(({ target }) => target);
+    });
+    assert.ok(centeredPans.length >= 2 && centeredPans.every((target) => target === 0),
+      "Centering should return the replacement buses to zero pan");
+    assert.deepEqual(await takeGainChanges(page), [], "Pan and seek must not change the voice mute settings via live gain");
+    await altoMute.click();
+    assert.deepEqual(await stripe(page, alto848.color, 1), alto848);
+    assert.deepEqual(await takeGainChanges(page), [{ bus: resumedTie.bus, target: 1 }],
+      "Restoring the sought tie should use the replacement Alto bus");
 
     await selectFugue(849);
     const colors849 = await voiceColors(page);
