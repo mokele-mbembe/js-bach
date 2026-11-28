@@ -24,6 +24,7 @@ declare global {
     jsBachRollProbe: {
       time: number;
       fills: RollFill[];
+      pitchLabels: Record<string, number>;
       oscillators: ScheduledOscillator[];
       gainChanges: { bus: number; target: number }[];
       initialPans: number[];
@@ -40,8 +41,8 @@ async function startClock(page: Page): Promise<number> {
   return page.evaluate(() => window.jsBachRollProbe.time - document.querySelector<HTMLProgressElement>("#progress")!.value);
 }
 
-async function renderAt(page: Page, origin: number, position: number): Promise<void> {
-  await page.evaluate((time) => { window.jsBachRollProbe.time = time; }, origin + position);
+async function renderAt(page: Page, anchor: number, position: number, { tempoRate = 1, startSeconds = 0 } = {}): Promise<void> {
+  await page.evaluate((time) => { window.jsBachRollProbe.time = time; }, anchor + (position - startSeconds) / tempoRate);
   await page.waitForFunction((target) =>
     Math.abs(document.querySelector<HTMLProgressElement>("#progress")!.value - target) < 1e-8, position);
   await assertPlayhead(page, position);
@@ -179,7 +180,7 @@ export async function checkPianoRoll(browser: Browser, address: string): Promise
   try {
     await page.addInitScript(() => {
       const probe: Window["jsBachRollProbe"] = {
-        time: 0, fills: [], oscillators: [], gainChanges: [], initialPans: [], panChanges: [],
+        time: 0, fills: [], pitchLabels: {}, oscillators: [], gainChanges: [], initialPans: [], panChanges: [],
       };
       window.jsBachRollProbe = probe;
       const OriginalContext = AudioContext;
@@ -238,13 +239,27 @@ export async function checkPianoRoll(browser: Browser, address: string): Promise
         oscillators.get(this)?.stops.push(when);
       };
 
+      const pitchLabels = new WeakMap<HTMLCanvasElement, Record<string, number>>();
+      const fillText = CanvasRenderingContext2D.prototype.fillText;
+      CanvasRenderingContext2D.prototype.fillText = function (text, _x, y) {
+        if (/^C-?\d+$/.test(text)) {
+          const labels = pitchLabels.get(this.canvas) ?? {};
+          labels[text] = y;
+          pitchLabels.set(this.canvas, labels);
+        }
+        Reflect.apply(fillText, this, arguments);
+      };
       const drawImage = CanvasRenderingContext2D.prototype.drawImage;
-      CanvasRenderingContext2D.prototype.drawImage = function () {
-        if (this.canvas.matches("#polyphony canvas")) probe.fills = [];
+      CanvasRenderingContext2D.prototype.drawImage = function (image: CanvasImageSource) {
+        if (this.canvas.matches("#polyphony canvas")) {
+          probe.fills = [];
+          probe.pitchLabels = image instanceof HTMLCanvasElement ? pitchLabels.get(image) ?? {} : {};
+        }
         Reflect.apply(drawImage, this, arguments);
       };
       const fillRect = CanvasRenderingContext2D.prototype.fillRect;
       CanvasRenderingContext2D.prototype.fillRect = function (x, y, width, height) {
+        if (x === 0 && y === 0) pitchLabels.delete(this.canvas);
         if (this.canvas.matches("#polyphony canvas") && typeof this.fillStyle === "string") {
           probe.fills.push({ color: this.fillStyle, opacity: this.globalAlpha, x, y, width, height });
         }
@@ -328,23 +343,51 @@ export async function checkPianoRoll(browser: Browser, address: string): Promise
     assert.deepEqual(live.pan.filter(({ target }) => target !== 0).map(({ target }) => target), [-1, 1],
       "The spread control must pan the current voice buses outward");
 
-    const jumped = await clickRollTime(page, 127.42);
-    assert.ok(jumped > 127.1875 && jumped < 127.65625, "The click should seek inside the C-sharp tie");
+    const progress = page.locator("#progress");
+    const position = () => progress.evaluate((node: HTMLProgressElement) => node.value);
+    const changeSetting = async (selector: string, value: number) => {
+      const input = page.locator(selector);
+      await input.fill(String(value));
+      await input.press("Tab");
+    };
+    await page.evaluate(() => { window.jsBachRollProbe.time += 0.25; });
+    await page.waitForFunction((start) => document.querySelector<HTMLProgressElement>("#progress")!.value > start, paused);
+    const beforeTransform = await position();
+    const tempoRate = 1.5;
+    const transpose = 11; // C-sharp 4 moves to the labelled C5 row.
+    await changeSetting("#tempo-rate", tempoRate);
+    assert.equal(await position(), beforeTransform, "Changing tempo should preserve the current movement position");
+    const beforeTranspose = await page.evaluate(() => window.jsBachRollProbe.oscillators.length);
+    await changeSetting("#transpose", transpose);
+    assert.equal(await position(), beforeTransform, "Changing pitch should preserve the current movement position");
+
+    // Widen the roll for this check so one click pixel is shorter than the end of the tie after score voice 6 enters.
+    const originalViewport = page.viewportSize()!;
+    const widened = await page.addStyleTag({ content: "main { max-width: none }" });
+    await page.setViewportSize({ width: 2200, height: originalViewport.height });
+    await page.waitForFunction(() => document.querySelector<HTMLCanvasElement>("#polyphony canvas")!.width > 2000);
+    const beforeJump = await page.evaluate(() => window.jsBachRollProbe.oscillators.length);
+    assert.ok(beforeJump > beforeTranspose, "Live transposition should schedule replacement oscillators");
+    const jumped = await clickRollTime(page, 127.58);
+    assert.ok(jumped > 127.5 && jumped < 127.65625, "The click should seek into the tie after its score-voice handoff");
     await page.getByText("Playing Fugue", { exact: true }).waitFor();
-    const restarted = await page.evaluate(({ count, beforePreview }) => {
+    const restarted = await page.evaluate(({ beforeJump, beforeTranspose }) => {
       const { oscillators, initialPans } = window.jsBachRollProbe;
-      return { notes: oscillators.slice(count), previous: oscillators.slice(beforePreview, count), pans: initialPans.slice(-3) };
-    }, { count: live.count, beforePreview });
+      return { notes: oscillators.slice(beforeJump), previous: oscillators.slice(beforeTranspose, beforeJump), pans: initialPans.slice(-3) };
+    }, { beforeJump, beforeTranspose });
     assert.deepEqual(restarted.pans, [-1, 0, 1], "Seeking should preserve spread on the replacement buses");
     assert.ok(restarted.previous.some(({ stops }) => stops.length > 1), "Seeking should stop the old playback");
     const resumedTie = restarted.notes.find(({ pitch, stops, start }) =>
-      pitch === 61 && Math.abs(stops[0] - start - (127.65625 - jumped)) < 1e-7);
-    assert.ok(resumedTie, "The C-sharp must play from the seek point through its original cross-voice release");
+      pitch === 61 + transpose && Math.abs(stops[0] - start - (127.65625 - jumped) / tempoRate) < 1e-7);
+    assert.ok(resumedTie, "The transposed tie must play for the remaining score duration scaled by tempo");
     assert.equal(resumedTie.gain, 0, "The replacement Alto bus must start muted");
     assert.ok(await panel.getByRole("checkbox", { name: "Mute Alto" }).isChecked());
     const tiePosition = Math.min(jumped + 0.03, (jumped + 127.65625) / 2);
-    await renderAt(page, resumedTie.start - jumped, tiePosition);
-    assert.deepEqual(await stripe(page, alto848.color, 0.26), { ...alto848, opacity: 0.26 });
+    await renderAt(page, resumedTie.start, tiePosition, { tempoRate, startSeconds: jumped });
+    const shiftedAlto = await stripe(page, alto848.color, 0.26);
+    const c5Row = await page.evaluate(() => window.jsBachRollProbe.pitchLabels.C5);
+    assert.ok(Math.abs(shiftedAlto.y + shiftedAlto.height / 2 - c5Row) < 1,
+      "The active Alto highlight should align with the transposed C5 pitch label");
     await spread.click();
     assert.equal(await spread.getAttribute("aria-pressed"), "false");
     const centeredPans = await page.evaluate(() => {
@@ -355,9 +398,18 @@ export async function checkPianoRoll(browser: Browser, address: string): Promise
       "Centering should return the replacement buses to zero pan");
     assert.deepEqual(await takeGainChanges(page), [], "Pan and seek must not change the voice mute settings via live gain");
     await altoMute.click();
-    assert.deepEqual(await stripe(page, alto848.color, 1), alto848);
+    assert.deepEqual(await stripe(page, alto848.color, 1), { ...shiftedAlto, opacity: 1 });
     assert.deepEqual(await takeGainChanges(page), [{ bus: resumedTie.bus, target: 1 }],
       "Restoring the sought tie should use the replacement Alto bus");
+
+    await renderAt(page, resumedTie.start, 127.66, { tempoRate, startSeconds: jumped });
+    assert.notEqual((await stripe(page, alto848.color, 1)).y, shiftedAlto.y,
+      "The transposed tie should release at the original score position");
+    await stop();
+    await changeSetting("#tempo-rate", 1);
+    await changeSetting("#transpose", 0);
+    await widened.evaluate((style) => style.parentNode?.removeChild(style));
+    await page.setViewportSize(originalViewport);
 
     await selectFugue(849);
     const colors849 = await voiceColors(page);

@@ -24,6 +24,8 @@ const voiceChoices = element("#voice-choices");
 const play = element<HTMLButtonElement>("#play");
 const stop = element<HTMLButtonElement>("#stop");
 const retry = element<HTMLButtonElement>("#retry");
+const rateInput = element<HTMLInputElement>("#tempo-rate");
+const transposeInput = element<HTMLInputElement>("#transpose");
 const status = element("#status");
 const progress = element<HTMLProgressElement>("#progress");
 const elapsed = element("#elapsed");
@@ -48,6 +50,8 @@ let audio: AudioContext | undefined;
 let playback: MixedPlayback | undefined;
 let polyphony: ReturnType<typeof createPolyphony> | undefined;
 let startSeconds = 0;
+let tempoRate = rateInput.valueAsNumber;
+let transpose = transposeInput.valueAsNumber;
 let attempt = 0;
 let frame = 0;
 
@@ -252,7 +256,7 @@ async function startPlayback(): Promise<void> {
     };
     const mixer = polyphonyPanel.hidden ? undefined : polyphony;
     playback = playPerformance(audio, performance, onEnded, mixer?.voiceIds ?? [], {
-      muted: mixer && [...mixer.muted], pan: mixer?.pan, startSeconds,
+      muted: mixer && [...mixer.muted], pan: mixer?.pan, startSeconds, tempoRate, transpose,
     });
     setTransport(true, `Playing ${label}`);
     updateProgress();
@@ -269,6 +273,19 @@ function seek(seconds: number): void {
   if (wasPlaying) void startPlayback();
 }
 
+function updatePlaybackOptions(): void {
+  if (!rateInput.reportValidity() || !transposeInput.reportValidity()) return;
+  const rate = rateInput.valueAsNumber;
+  const semitones = transposeInput.valueAsNumber;
+  if (rate === tempoRate && semitones === transpose) return;
+  tempoRate = rate;
+  transpose = semitones;
+  polyphony?.setTranspose(transpose);
+  if (!stop.disabled) seek(playback?.position() ?? startSeconds);
+}
+
+rateInput.addEventListener("change", updatePlaybackOptions);
+transposeInput.addEventListener("change", updatePlaybackOptions);
 play.addEventListener("click", startPlayback);
 stop.addEventListener("click", () => {
   stopPlayback();
@@ -345,6 +362,7 @@ async function loadSelection(): Promise<void> {
           pan: (id, pan) => playback?.setVoicePan(id, pan),
           seek,
         });
+        polyphony?.setTranspose(transpose);
       }
       polyphony?.show(movement.performance, movement.asset);
     }

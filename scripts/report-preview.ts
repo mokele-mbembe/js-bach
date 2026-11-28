@@ -228,9 +228,10 @@ try {
       "| First play | Requests | Response body bytes | Response bytes with headers |", "| --- | ---: | ---: | ---: |",
       `| Playwright-observed page requests | ${firstPlay.count} | ${firstPlay.body} | ${firstPlay.transfer} |`,
       `| Catalog and movement | ${firstScore.count} | ${firstScore.body} | ${firstScore.transfer} |`, "",
-      "Playback checks covered the lazy piano rolls for BWV 846–849, unison and tied-note highlights during live mute and restore, click seeking, stereo spread, solos, and rapid switches.",
+      "Playback checks covered the lazy piano rolls for BWV 846–849, unison and tied-note highlights during live mute and restore, click seeking at adjusted speed and pitch, stereo spread, solos, and rapid switches.",
       "The packaged browser API passed Node import, read-only voice and event queries including the BWV 848 tie across source voice IDs, and TypeScript declaration checks. Chromium verified scheduled note clocks and seeking, initial mute and stereo pan, name and ID voice controls, callback stops and rejections, and cancellation.", "",
       "Offline Chromium rendering confirmed that centered pan and the no-panner fallback match the direct output level, and that hard pan isolates the intended channel at constant stereo power.", "",
+      "Chromium checked that tempo changes scale the audio clock while seeking, note callbacks, and the Canvas playhead retain their movement positions. The transposed oscillator and highlighted pitch were checked for BWV 848's cross-voice tie.", "",
     ].join("\n");
     writeFileSync(join(dirname(metadata), "size-report.md"), report);
     if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, report);

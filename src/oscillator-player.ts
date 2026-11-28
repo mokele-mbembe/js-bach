@@ -20,7 +20,7 @@ export interface MixedPlayback extends Playback {
   setVoicePan(voice: string, pan: number): void;
 }
 
-/** A note on the selected performance's timeline with its scheduled AudioContext times. */
+/** A note on the selected performance's timeline with its sounding pitch and scheduled AudioContext times. */
 export interface ScheduledNote extends PerformanceEvent {
   /** Audio clock onset. After a seek, a sustained note starts at the new playback origin. */
   readonly audioStartTime: number;
@@ -34,6 +34,10 @@ export interface PlayOptions {
   pan?: Readonly<Record<string, number>>;
   /** Start at this point on the performance timeline, including any notes still sounding. */
   startSeconds?: number;
+  /** Playback speed from 0.5 to 2. Defaults to 1. Positions remain in performance seconds. */
+  tempoRate?: number;
+  /** Signed semitone shift from -12 to 12. Defaults to 0. */
+  transpose?: number;
   /** Called within the 150 ms lookahead, including for muted notes. A rejected callback stops playback. */
   onNote?: (note: ScheduledNote) => void;
 }
@@ -45,7 +49,13 @@ export function validateVoicePan(value: number): void {
 }
 
 /** Schedules a performance on an already running AudioContext. */
-export function playPerformance(context: AudioContext, performance: Performance, onEnded: () => void): Playback;
+export function playPerformance(
+  context: AudioContext,
+  performance: Performance,
+  onEnded: () => void,
+  voiceIds?: undefined,
+  options?: PlayOptions,
+): Playback;
 export function playPerformance(
   context: AudioContext,
   performance: Performance,
@@ -58,10 +68,16 @@ export function playPerformance(
   performance: Performance,
   onEnded: () => void,
   voiceIds?: readonly string[],
-  { muted, pan, startSeconds: seek = 0, onNote }: PlayOptions = {},
+  { muted, pan, startSeconds: seek = 0, tempoRate = 1, transpose = 0, onNote }: PlayOptions = {},
 ): Playback | MixedPlayback {
   if (!Number.isFinite(seek) || seek < 0 || seek > performance.durationSeconds) {
     throw new RangeError(`startSeconds must be between 0 and ${performance.durationSeconds}.`);
+  }
+  if (!Number.isFinite(tempoRate) || tempoRate < 0.5 || tempoRate > 2) {
+    throw new RangeError("tempoRate must be between 0.5 and 2.");
+  }
+  if (!Number.isInteger(transpose) || transpose < -12 || transpose > 12) {
+    throw new RangeError("transpose must be an integer between -12 and 12.");
   }
   const ids = new Set(voiceIds);
   const initiallyMuted = new Set(muted);
@@ -97,6 +113,10 @@ export function playPerformance(
   const active = new Map<OscillatorNode, number>();
   let cursor = 0;
   let stopped = false;
+
+  function audioTimeAt(position: number): number {
+    return start + (position - seek) / tempoRate;
+  }
 
   function disconnect(): void {
     for (const { gain, panner } of voices.values()) {
@@ -168,19 +188,20 @@ export function playPerformance(
       const deadline = context.currentTime + LOOKAHEAD_SECONDS;
       while (!stopped && cursor < performance.notes.length) {
         const { midiPitch, startSeconds, endSeconds, voice, voiceId } = performance.notes[cursor];
-        const onset = start + Math.max(0, startSeconds - seek);
+        const onset = audioTimeAt(Math.max(startSeconds, seek));
         if (onset >= deadline) break;
         cursor++;
         const now = context.currentTime;
         if (endSeconds <= seek) continue;
-        const end = start + (endSeconds - seek);
+        const end = audioTimeAt(endSeconds);
         if (end <= now) continue;
         const bus = voiceId === undefined ? undefined : voices.get(voiceId);
         // Offset the centered mono panner's 1/√2 per channel while preserving its equal-power curve.
         const peak = bus?.panner ? NOTE_PEAK_GAIN * Math.SQRT2 : NOTE_PEAK_GAIN;
         const audioStartTime = Math.max(now, onset);
-        schedule(midiPitch, audioStartTime, end, bus?.gain ?? master, peak);
-        const result: unknown = onNote?.({ midiPitch, startSeconds, endSeconds, voiceId: voiceId ?? null, scoreVoice: voice,
+        const pitch = midiPitch + transpose;
+        schedule(pitch, audioStartTime, end, bus?.gain ?? master, peak);
+        const result: unknown = onNote?.({ midiPitch: pitch, startSeconds, endSeconds, voiceId: voiceId ?? null, scoreVoice: voice,
           audioStartTime, audioEndTime: end });
         if (result !== null && (typeof result === "object" || typeof result === "function")) {
           // Observe returned promises without pausing the lookahead loop.
@@ -191,7 +212,7 @@ export function playPerformance(
         }
       }
 
-      if (!stopped && context.currentTime >= start + (performance.durationSeconds - seek)) {
+      if (!stopped && context.currentTime >= audioTimeAt(performance.durationSeconds)) {
         stop();
         onEnded();
       }
@@ -205,7 +226,7 @@ export function playPerformance(
   // Let callers receive the handle before any callback can stop playback.
   if (!onNote) pump();
   const playback = {
-    position: () => Math.min(seek + Math.max(0, context.currentTime - start), performance.durationSeconds),
+    position: () => Math.min(seek + Math.max(0, context.currentTime - start) * tempoRate, performance.durationSeconds),
     stop,
   };
   return voiceIds ? { ...playback, setVoiceMuted, setVoicePan } : playback;

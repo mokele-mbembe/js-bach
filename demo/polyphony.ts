@@ -74,6 +74,7 @@ export function createPolyphony(panel: HTMLElement, controls: MixerControls) {
     show,
     setVisible: (visible: boolean) => { panel.hidden = !visible; },
     setPosition: roll.setPosition,
+    setTranspose: roll.setTranspose,
     get voiceIds() { return voiceIds; },
     get muted(): ReadonlySet<string> { return muted; },
     get pan() { return pan; },

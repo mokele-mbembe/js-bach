@@ -89,6 +89,23 @@ Pan ranges from `-1` (left) to `1` (right) with `0` at center. Unspecified voice
 
 `startSeconds` ranges from zero to `getPerformance().durationSeconds`, inclusive. At the endpoint playback completes without scheduling notes. Passing a start time uses full movement coordinates even for a solo. Omitting it starts a solo at its first entrance with the existing rebased timeline. When seeking into a sustained note, the player starts a new oscillator at the seek point for the remaining duration. `position()` and the callback's `startSeconds` and `endSeconds` use the movement timeline. The callback keeps the note's original musical times, while `audioStartTime` reflects the new oscillator onset.
 
+### Tempo and transposition
+
+The current source build supports `tempoRate` from `0.5` through `2` and integer `transpose` values from `-12` through `12` semitones. The defaults are `1` and `0`. Invalid values raise `RangeError`.
+
+```js
+const playback = await play("bwv848", {
+  movement: "fugue",
+  startSeconds: 127.55,
+  tempoRate: 1.5,
+  transpose: 2,
+});
+```
+
+`startSeconds`, `position()`, and the callback's `startSeconds` and `endSeconds` are measured at the original tempo. At `tempoRate: 2`, two seconds of that timeline pass in one audio second. The 150 ms scheduling window and `audioStartTime` and `audioEndTime` use the Web Audio clock. `onNote.midiPitch` gives the sounding pitch after transposition, while `getPerformance()` still returns the original pitches and timings.
+
+In the demo, changing speed or pitch during play resumes from the current position with the same mute and pan settings. The piano roll shows the sounding pitches on the original time scale.
+
 ## Rebuild and licenses
 
 The TypeScript source, build scripts, and original score files are in `source/`. To rebuild from source, run `npm ci` and `npm run pack:preview` in that directory.

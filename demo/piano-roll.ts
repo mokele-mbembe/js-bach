@@ -24,6 +24,7 @@ interface RollLayout {
   plotWidth: number;
   plotEnd: number;
   rowHeight: number;
+  transpose: number;
   xAt(seconds: number): number;
   yAt(pitch: number): number;
 }
@@ -58,19 +59,20 @@ function timeLabel(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-function rollLayout(width: number, height: number, { durationSeconds, notes }: PianoRollMovement): RollLayout | undefined {
+function rollLayout(width: number, height: number, { durationSeconds, notes }: PianoRollMovement, transpose: number): RollLayout | undefined {
   if (durationSeconds <= 0 || notes.length === 0) return undefined;
   let minimumPitch = Infinity;
   let maximumPitch = -Infinity;
   for (const { midiPitch } of notes) {
-    minimumPitch = Math.min(minimumPitch, midiPitch - 1);
-    maximumPitch = Math.max(maximumPitch, midiPitch + 1);
+    const pitch = midiPitch + transpose;
+    minimumPitch = Math.min(minimumPitch, pitch - 1);
+    maximumPitch = Math.max(maximumPitch, pitch + 1);
   }
   const plotWidth = width - left - right;
   const plotEnd = height - bottom;
   const rowHeight = (plotEnd - top) / (maximumPitch - minimumPitch + 1);
   return {
-    minimumPitch, maximumPitch, plotWidth, plotEnd, rowHeight,
+    minimumPitch, maximumPitch, plotWidth, plotEnd, rowHeight, transpose,
     xAt: (seconds) => left + seconds / durationSeconds * plotWidth,
     yAt: (pitch) => top + (maximumPitch - pitch) * rowHeight,
   };
@@ -88,7 +90,7 @@ function drawScore(
   context.fillRect(0, 0, width, height);
   if (!movement || !layout) return;
   const { durationSeconds, notes, entries, voiceColor } = movement;
-  const { minimumPitch, maximumPitch, plotWidth, plotEnd, rowHeight, xAt, yAt } = layout;
+  const { minimumPitch, maximumPitch, plotWidth, plotEnd, rowHeight, transpose, xAt, yAt } = layout;
 
   context.font = "11px system-ui, sans-serif";
   context.textBaseline = "middle";
@@ -142,7 +144,7 @@ function drawScore(
       if (muted.has(voiceId) !== drawMuted) continue;
       const x = xAt(startSeconds);
       context.fillStyle = voiceColor(voiceId);
-      context.fillRect(x, yAt(midiPitch) + inset, Math.max(1, xAt(endSeconds) - x), rowHeight - 2 * inset);
+      context.fillRect(x, yAt(midiPitch + transpose) + inset, Math.max(1, xAt(endSeconds) - x), rowHeight - 2 * inset);
     }
   }
   context.globalAlpha = 1;
@@ -151,7 +153,7 @@ function drawScore(
 function drawActiveNotes(
   context: CanvasRenderingContext2D,
   { notes, voiceColor }: PianoRollMovement,
-  { rowHeight, xAt, yAt }: RollLayout,
+  { rowHeight, transpose, xAt, yAt }: RollLayout,
   position: number,
   muted: ReadonlySet<string>,
 ): void {
@@ -170,7 +172,7 @@ function drawActiveNotes(
     const inset = Math.min(0.5, bandHeight / 6);
     for (const [index, { voiceId, startSeconds, endSeconds }] of sounding.entries()) {
       const x = xAt(startSeconds);
-      const y = yAt(pitch) + index * bandHeight + inset;
+      const y = yAt(pitch + transpose) + index * bandHeight + inset;
       const width = Math.max(1, xAt(endSeconds) - x);
       const height = bandHeight - 2 * inset;
       if (muted.has(voiceId)) {
@@ -193,6 +195,7 @@ export function createPianoRoll(canvas: HTMLCanvasElement, onSeek?: (seconds: nu
   let layout: RollLayout | undefined;
   let muted: ReadonlySet<string> = new Set();
   let position = 0;
+  let transpose = 0;
   let playing = false;
   let width = 0;
   let height = 0;
@@ -215,7 +218,7 @@ export function createPianoRoll(canvas: HTMLCanvasElement, onSeek?: (seconds: nu
         backdrop.height = pixelHeight;
       }
       background.setTransform(backdrop.width / width, 0, 0, backdrop.height / height, 0, 0);
-      layout = movement && rollLayout(width, height, movement);
+      layout = movement && rollLayout(width, height, movement, transpose);
       drawScore(background, width, height, movement, layout, muted);
       dirty = false;
     }
@@ -287,6 +290,12 @@ export function createPianoRoll(canvas: HTMLCanvasElement, onSeek?: (seconds: nu
     },
     setMutedVoices(ids: ReadonlySet<string>): void {
       muted = new Set(ids);
+      dirty = true;
+      paint();
+    },
+    setTranspose(semitones: number): void {
+      if (semitones === transpose) return;
+      transpose = semitones;
       dirty = true;
       paint();
     },
