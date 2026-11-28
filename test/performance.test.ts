@@ -6,7 +6,7 @@ import { movements, performanceForMovement, readCorpusFile, readMovementScore } 
 import { compareSourceAttacks } from "../scripts/source-attacks.js";
 import { importMusicXml, importMxl } from "../src/import-mxl.js";
 import { soloVoice, toPerformance } from "../src/performance.js";
-import { performanceTimeline, soloMusicalVoice } from "../src/playback-asset.js";
+import { describeVoices, performanceTimeline, soloMusicalVoice } from "../src/playback-asset.js";
 import { getScoreAttacks, midiPitch, type ScoreIR } from "../src/score-ir.js";
 import { expandWrittenRepeats } from "../src/score-repeats.js";
 
@@ -310,6 +310,22 @@ test("the BWV 855 fugue preserves its two audited voices and solo entrances", ()
     assert.deepEqual(solo.notes[0], { voiceId, voice, midiPitch, startSeconds: 0, endSeconds: 0.125 });
   }
 });
+
+for (const bwv of [872, 873, 874, 875]) {
+  test(`the BWV ${bwv} fugue retains full playback with no selectable musical voices`, () => {
+    const movement = movements.find(({ id }) => id === `bwv${bwv}-fugue`);
+    assert.ok(movement);
+    const score = readMovementScore(movement);
+    const baseline = toPerformance(score);
+    assert.ok(new Set(baseline.notes.map(({ voice }) => voice)).size > 1);
+    assert.deepEqual(describeVoices(movement.voices).voices, []);
+    const timeline = performanceTimeline(performanceForMovement(score, movement));
+    assert.deepEqual(timeline, {
+      durationSeconds: baseline.durationSeconds,
+      notes: baseline.notes.map(({ voice, ...note }) => ({ ...note, scoreVoice: voice, voiceId: null })),
+    });
+  });
+}
 
 test("BWV 867's five audited conflicts can be assigned by individual written note", () => {
   const movement = movements.find(({ id }) => id === "bwv867-fugue");

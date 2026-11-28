@@ -109,7 +109,7 @@ BWV 849 uses the credited Mutopia engraving. BWV 867 uses the five-staff BWV 867
 
 To check a different corpus movement, pass `--reference <config.json>`. The config gives `source`, `credit`, `license`, and a `voices` object mapping LilyPond variables to musical voice IDs. Supply either `download` or a `file` path relative to the config. Use `archiveMember` for a ZIP input, `sha256` to pin the input, and `memberSha256` to pin the extracted file. The reader supports selected, inline `\relative` voice lines with explicit starting pitches and written notes, rests, skips, and ties. Unsupported LilyPond notation produces an error.
 
-Mutopia audit batches two through five deferred voice assignments for the fugues BWV 856–871.
+Mutopia audit batches two through six deferred voice assignments for the fugues BWV 856–875.
 
 | Fugue | Audit evidence |
 | --- | --- |
@@ -129,6 +129,10 @@ Mutopia audit batches two through five deferred voice assignments for the fugues
 | BWV 869 | The manifest records an Artform/OpenWTC score with PDMX MIDI. The separate Mutopia edition wraps the relative voice lines and includes parallel music and a cross-voice tie in the Alto. [BWV 869 sources](corpus/bwv869/sources.json) · [Mutopia 1563](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1563) |
 | BWV 870 | The recorded Mutopia engraving uses named voice contexts inside relative declarations. A diagnostic copy with compatible context and meter syntax still hits a written chord in the Comes. [Mutopia 209](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=209) |
 | BWV 871 | The recorded Mutopia engraving uses German pitch names. With pitch spellings converted for a diagnostic audit, the Soprano still hits a written chord and the Alto has parallel music the reader cannot extract. [Mutopia 9](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=9) |
+| BWV 872 | The score and MIDI come from the same PDMX/MuseScore entry (130945). The Mutopia catalogue has no corresponding fugue. [BWV 872 sources](corpus/bwv872/sources.json) · [Mutopia catalogue](https://www.mutopiaproject.org/piece-list.html) |
+| BWV 873 | The score and MIDI come from the same PDMX/MuseScore entry (130948). The Mutopia catalogue has no corresponding fugue. [BWV 873 sources](corpus/bwv873/sources.json) · [Mutopia catalogue](https://www.mutopiaproject.org/piece-list.html) |
+| BWV 874 | The fugue is a slice of a combined PDMX/MuseScore edition (1193551) with MIDI from the same entry. The Mutopia catalogue has no corresponding fugue. [BWV 874 sources](corpus/bwv874/sources.json) · [Mutopia catalogue](https://www.mutopiaproject.org/piece-list.html) |
+| BWV 875 | The fugue uses PDMX/MuseScore (130952) for the score and MIDI. The work's Mutopia catalogue entry and registered engraving cover only the prelude. [BWV 875 sources](corpus/bwv875/sources.json) · [Mutopia 974](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=974) |
 
 ### Verify and build
 
