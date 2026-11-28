@@ -109,7 +109,7 @@ BWV 849 uses the credited Mutopia engraving. BWV 867 uses the five-staff BWV 867
 
 To check a different corpus movement, pass `--reference <config.json>`. The config gives `source`, `credit`, `license`, and a `voices` object mapping LilyPond variables to musical voice IDs. Supply either `download` or a `file` path relative to the config. Use `archiveMember` for a ZIP input, `sha256` to pin the input, and `memberSha256` to pin the extracted file. The reader supports selected, inline `\relative` voice lines with explicit starting pitches and written notes, rests, skips, and ties. Unsupported LilyPond notation produces an error.
 
-Mutopia audit batches two through four deferred voice assignments for the fugues BWV 856–867.
+Mutopia audit batches two through five deferred voice assignments for the fugues BWV 856–871.
 
 | Fugue | Audit evidence |
 | --- | --- |
@@ -125,6 +125,10 @@ Mutopia audit batches two through four deferred voice assignments for the fugues
 | BWV 865 | The recorded Mutopia engraving uses absolute pitches in parallel staff blocks, embedded cross-staff voices, and chords, including an octave chord at the end of a pedal tie. The reader cannot extract the written voices. [Mutopia 807](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=807) |
 | BWV 866 | The manifest records an Artform/OpenWTC score with PDMX MIDI, and the Mutopia catalogue has no matching fugue. A diagnostic audit of a separate Rother engraving found a pitch difference at m. 27. [BWV 866 sources](corpus/bwv866/sources.json) · [Rother archive](https://open.uct.ac.za/items/d2a6887b-7196-4fbe-8b56-a469bf557f93) |
 | BWV 867 | The manifest has no Mutopia reference. The Rother audit still reports seven unresolved exact unisons and five within-measure voice conflicts. [BWV 867 sources](corpus/bwv867/sources.json) · [Rother archive](https://open.uct.ac.za/items/d2a6887b-7196-4fbe-8b56-a469bf557f93) |
+| BWV 868 | The score and MIDI are from PDMX/OpenWTC, and the Mutopia catalogue has no matching fugue. [BWV 868 sources](corpus/bwv868/sources.json) · [Mutopia catalogue](https://www.mutopiaproject.org/piece-list.html) |
+| BWV 869 | The manifest records an Artform/OpenWTC score with PDMX MIDI. The separate Mutopia edition wraps the relative voice lines and includes parallel music and a cross-voice tie in the Alto. [BWV 869 sources](corpus/bwv869/sources.json) · [Mutopia 1563](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1563) |
+| BWV 870 | The recorded Mutopia engraving uses named voice contexts inside relative declarations. A diagnostic copy with compatible context and meter syntax still hits a written chord in the Comes. [Mutopia 209](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=209) |
+| BWV 871 | The recorded Mutopia engraving uses German pitch names. With pitch spellings converted for a diagnostic audit, the Soprano still hits a written chord and the Alto has parallel music the reader cannot extract. [Mutopia 9](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=9) |
 
 ### Verify and build
 
