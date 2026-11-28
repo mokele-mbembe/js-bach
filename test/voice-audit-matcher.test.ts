@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { movements, readMovementScore } from "../scripts/corpus.js";
 import { auditVoiceAssignments, type ReferenceVoiceNote, type ScoreVoiceNote } from "../scripts/voice-audit-matcher.js";
+import { midiPitch } from "../src/score-ir.js";
 
 function score(tick: number, scoreVoice: string, measure = "1", durationTicks = 1): ScoreVoiceNote {
   return { tick, durationTicks, midiPitch: 60, scoreVoice, measure, tieStart: false, tieStop: false };
@@ -32,6 +34,42 @@ test("retains all unison candidates even when context suggests a unique assignme
     scoreNotes: [score(2, "1", "2"), score(2, "2", "2"), score(2, "3", "2")],
     referenceNotes: [reference(2, "alto"), reference(2, "tenor"), reference(2, "tenor")],
   }]);
+});
+
+test("BWV 867's seven audited unisons retain both candidates without a voice assignment", () => {
+  const movement = movements.find(({ id }) => id === "bwv867-fugue");
+  assert.ok(movement);
+  const written = readMovementScore(movement);
+  assert.equal(written.ticksPerQuarter, 4);
+
+  // Untied unisons from the pinned Rother engraving, in the MusicXML tick grid.
+  const unisons = [
+    ["16", 4, 4, 54, ["6", "8"], ["tenor", "bass"]],
+    ["33", 4, 4, 59, ["5", "6"], ["tenor", "bass"]],
+    ["50", 8, 8, 70, ["1", "2"], ["soprano", "alto"]],
+    ["51", 0, 8, 63, ["2", "5"], ["alto", "mezzo"]],
+    ["68", 8, 8, 58, ["2", "5"], ["alto", "mezzo"]],
+    ["69", 0, 8, 53, ["5", "8"], ["mezzo", "tenor"]],
+    ["69", 8, 8, 46, ["5", "6"], ["tenor", "bass"]],
+  ] as const;
+  const groups = unisons.map(([measure, offsetTicks, durationTicks, pitch, scoreVoices, voiceIds]) => {
+    const bar = written.measures.find(({ number }) => number === measure);
+    assert.ok(bar, `measure ${measure}`);
+    const span = { tick: bar.startTick + offsetTicks, durationTicks, midiPitch: pitch };
+    const scoreNotes = bar.events.flatMap((event) => event.kind === "note" && !event.grace &&
+      event.offsetTicks === offsetTicks && event.durationTicks === durationTicks && midiPitch(event.pitch) === pitch
+      ? [{ ...span, measure, scoreVoice: event.voice, tieStart: event.tieStart, tieStop: event.tieStop }]
+      : []);
+    assert.deepEqual(scoreNotes.map(({ scoreVoice }) => scoreVoice).sort(), scoreVoices, `measure ${measure}, offset ${offsetTicks}`);
+    const referenceNotes = voiceIds.map((voiceId) => ({ ...span, voiceId, tieStart: false, tieStop: false }));
+    return { ...span, scoreNotes, referenceNotes };
+  });
+  const audit = auditVoiceAssignments(groups.flatMap(({ scoreNotes }) => scoreNotes), groups.flatMap(({ referenceNotes }) => referenceNotes));
+  assert.equal(audit.scope, "incomplete");
+  assert.deepEqual(audit.assignments, []);
+  assert.deepEqual(audit.differences, []);
+  assert.deepEqual(audit.tieDifferences, []);
+  assert.deepEqual(audit.ambiguities, groups.map((group) => ({ ...group, reason: "underdetermined" })));
 });
 
 test("unison assignments follow ties when nearby direct matches suggest a different voice", () => {

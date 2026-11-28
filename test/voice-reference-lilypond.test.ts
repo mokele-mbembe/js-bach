@@ -112,6 +112,16 @@ test("LilyPond reference reader rejects chords instead of emitting a partial voi
   `, { bass: "bass" }), /bass: unsupported LilyPond token or duration "<"/u);
 });
 
+test("LilyPond reference reader rejects a BWV 865-style tied pedal ending in an octave chord", () => {
+  const pedal = String.raw`bass = \relative c { \tieDown a,2 ~ a1 ~ a1 ~ a1 ~`;
+  const voices = { bass: "bass" };
+  const singleNoteEnding = readLilyPondVoices(`${pedal} a1 }`, voices);
+  assert.deepEqual(singleNoteEnding.notes.map(({ tieStart, tieStop }) => [tieStart, tieStop]), [
+    [true, false], [true, true], [true, true], [true, true], [false, true],
+  ]);
+  assert.throws(() => readLilyPondVoices(`${pedal} <a a'>1 }`, voices), /bass: unsupported LilyPond token or duration "<"/u);
+});
+
 test("LilyPond reference reader rejects three parallel branches in a selected relative line", () => {
   assert.throws(() => readLilyPondVoices(String.raw`
     upper = \relative c' { c4 << { d4 } \\ { f4 } \\ { a4 } >> }
