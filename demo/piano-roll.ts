@@ -36,7 +36,7 @@ const voiceColors = new Map([
   ["bass", "#efaed8"],
   ["mezzo", "#ff8b70"],
 ]);
-const fallbackVoiceColors = ["#e7d547", "#44d7dc", "#8ace51", "#dc82e0", "#5b90e6"];
+const fallbackVoiceColors = ["#e7d547", "#44d7dc", "#8ace51", "#dc82e0", "#64a0f2"];
 const backgroundColor = "#102321";
 const mutedAlpha = 0.26;
 const left = 34;

@@ -96,6 +96,52 @@ async function assertNoHighlights(page: Page, colors: Map<string, string>): Prom
   for (const color of colors.values()) assert.ok(!drawn.includes(color), `Stopped roll still highlights ${color}`);
 }
 
+async function checkPausedFallbackContrast(page: Page): Promise<void> {
+  const { note, background } = await page.evaluate(async () => {
+    const moduleUrl = new URL("./demo/piano-roll.js", location.href).href;
+    const { createPianoRoll, createPianoRollPalette } = await import(moduleUrl) as typeof import("../demo/piano-roll.js");
+    const canvas = document.createElement("canvas");
+    canvas.style.width = "320px";
+    canvas.style.height = "160px";
+    document.body.append(canvas);
+    try {
+      const voiceIds = ["one", "two", "three", "four", "five"];
+      const roll = createPianoRoll(canvas);
+      roll.setMovement({
+        durationSeconds: 4, entries: [], voiceColor: createPianoRollPalette(voiceIds),
+        notes: [{ voiceId: "five", midiPitch: 61, startSeconds: 1, endSeconds: 3 }],
+      });
+      await new Promise<void>((resolve) => {
+        const observer = new ResizeObserver(() => {
+          observer.disconnect();
+          requestAnimationFrame(() => resolve());
+        });
+        observer.observe(canvas);
+      });
+      const context = canvas.getContext("2d")!;
+      // The sole C-sharp row is centered, with the note spanning the middle half of the timeline.
+      const pixelAt = (fraction: number) => Array.from(context.getImageData(
+        Math.floor(canvas.width * fraction), Math.floor(canvas.height / 2), 1, 1,
+      ).data.slice(0, 3));
+      return { note: pixelAt(0.5), background: pixelAt(0.9) };
+    } finally {
+      canvas.remove();
+    }
+  });
+  const luminance = (rgb: number[]) => {
+    const [red, green, blue] = rgb.map((byte) => {
+      const channel = byte / 255;
+      return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  };
+  const noteLight = luminance(note);
+  const backgroundLight = luminance(background);
+  const contrast = (Math.max(noteLight, backgroundLight) + 0.05) / (Math.min(noteLight, backgroundLight) + 0.05);
+  assert.ok(contrast >= 3, `Paused fallback blue on a black-key row should reach 3:1 contrast, got ${contrast.toFixed(2)}:1`);
+  assert.notDeepEqual(note, [245, 245, 235], "The composited note must differ from the playhead");
+}
+
 export async function checkPianoRoll(browser: Browser, address: string): Promise<void> {
   const page = await browser.newPage();
   page.setDefaultTimeout(10_000);
@@ -244,6 +290,7 @@ export async function checkPianoRoll(browser: Browser, address: string): Promise
     assert.equal(await page.evaluate((index) => window.jsBachRollProbe.oscillators[index]?.pitch, previousOscillators),
       56, "The Baritone solo should start on G-sharp 3");
     await stop();
+    await checkPausedFallbackContrast(page);
   } finally {
     await page.close();
   }
