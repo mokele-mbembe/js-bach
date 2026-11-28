@@ -35,6 +35,14 @@ test("LilyPond reference reader tracks Dutch accidentals and the meter of the se
   ]);
 });
 
+test("LilyPond reference reader rejects German pitch names before interpreting an ambiguous b", () => {
+  const line = String.raw`alto = \relative c' { b4 }`;
+  const voices = { alto: "alto" };
+  assert.deepEqual(readLilyPondVoices(line, voices).notes.map(({ midiPitch }) => midiPitch), [59]);
+  const german = String.raw`\include "deutsch.ly"` + "\n" + line;
+  assert.throws(() => readLilyPondVoices(german, voices), /Unsupported LilyPond pitch language or include: deutsch/u);
+});
+
 test("LilyPond reference reader preserves both directions of a tie chain", () => {
   const reference = readLilyPondVoices(String.raw`line = \relative c' { c4 ~ c ~ c c }`, { line: "alto" });
   assert.deepEqual(reference.notes.map(({ tieStart, tieStop }) => [tieStart, tieStop]), [
@@ -104,6 +112,14 @@ test("LilyPond reference reader rejects inline absolute staff voices", () => {
   assert.throws(() => readLilyPondVoices(String.raw`
     \score { \new Staff { \partial 4 << { c'4 d'1 } \\ { g4 a1 } >> } }
   `, { soprano: "soprano", bass: "bass" }), /soprano: expected one inline LilyPond relative voice block/u);
+});
+
+test("LilyPond reference reader rejects a named Voice context inside a relative header", () => {
+  const voices = { dux: "alto" };
+  const line = String.raw`dux = \relative g' { g8 fis }`;
+  assert.deepEqual(readLilyPondVoices(line, voices).notes.map(({ midiPitch }) => midiPitch), [67, 66]);
+  const named = String.raw`dux = \relative g' \context Voice = "dux" { g8 fis }`;
+  assert.throws(() => readLilyPondVoices(named, voices), /dux: unsupported LilyPond token or duration.*context Voice/u);
 });
 
 test("LilyPond reference reader rejects chords instead of emitting a partial voice", () => {
