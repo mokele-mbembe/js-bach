@@ -109,7 +109,7 @@ BWV 849 uses the credited Mutopia engraving. BWV 867 uses the five-staff BWV 867
 
 To check a different corpus movement, pass `--reference <config.json>`. The config gives `source`, `credit`, `license`, and a `voices` object mapping LilyPond variables to musical voice IDs. Supply either `download` or a `file` path relative to the config. Use `archiveMember` for a ZIP input, `sha256` to pin the input, and `memberSha256` to pin the extracted file. The reader supports selected, inline `\relative` voice lines with explicit starting pitches and written notes, rests, skips, and ties. Unsupported LilyPond notation produces an error.
 
-The BWV 856–859 batch deferred voice assignments for all four fugues.
+The second and third Mutopia audit batches deferred voice assignments for the fugues BWV 856–863.
 
 | Fugue | Audit evidence |
 | --- | --- |
@@ -117,6 +117,10 @@ The BWV 856–859 batch deferred voice assignments for all four fugues.
 | BWV 857 | The original uses `articulate.ly`. A diagnostic copy stripped of wrappers and display commands still hits unsupported chords in the Bass. [Mutopia 2225](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=2225) |
 | BWV 858 | The score and MIDI are from PDMX/OpenWTC, and the manifest has no Mutopia voice reference. [BWV 858 sources](corpus/bwv858/sources.json) |
 | BWV 859 | The Artform/OpenWTC score has a PDMX MIDI reference, and the manifest has no Mutopia voice reference. [BWV 859 sources](corpus/bwv859/sources.json) |
+| BWV 860 | The recorded Mutopia engraving uses absolute pitches and splits the upper staff into three parallel branches. The reader requires named relative voice blocks. [Mutopia 605](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=605) |
+| BWV 861 | The recorded Mutopia engraving uses absolute pitches, embedded voices and chords within its staff blocks. The reader requires named relative voice blocks. [Mutopia 805](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=805) |
+| BWV 862 | The manifest records an Artform/OpenWTC score with PDMX MIDI. A separate Mutopia edition has inline key directives and chords that the current reader rejects. [BWV 862 sources](corpus/bwv862/sources.json) · [Mutopia 1375](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1375) |
+| BWV 863 | The manifest records an Artform/OpenWTC score with PDMX MIDI. The Mutopia catalogue has no matching fugue entry. [BWV 863 sources](corpus/bwv863/sources.json) · [Mutopia catalogue](https://www.mutopiaproject.org/piece-list.html) |
 
 ### Verify and build
 
